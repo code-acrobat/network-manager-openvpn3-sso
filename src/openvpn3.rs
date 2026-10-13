@@ -93,6 +93,28 @@ const SERVICE_NETCFG: &str = "net.openvpn.v3.netcfg";
 const SESSIONS_PATH: &str = "/net/openvpn/v3/sessions";
 const CONFIGMGR_PATH: &str = "/net/openvpn/v3/configuration";
 
+/// Background tasks of the current connection attempt (connect runner,
+/// event processor, status watcher, log stream). A new connect() or a
+/// disconnect() aborts everything registered here: stale status watchers
+/// otherwise poll dead sessions forever (journal spam) and their 600 s
+/// auth watchdog can fire a Failure signal that tears down a healthy,
+/// newer connection (observed live: an aborted attempt's watchdog killed
+/// the next, fully working connection 8 minutes in).
+static SESSION_TASKS: std::sync::Mutex<Vec<tokio::task::JoinHandle<()>>> =
+    std::sync::Mutex::new(Vec::new());
+
+pub(crate) fn register_session_task(handle: tokio::task::JoinHandle<()>) {
+    SESSION_TASKS.lock().unwrap().push(handle);
+}
+
+pub(crate) fn abort_session_tasks() {
+    SESSION_TASKS
+        .lock()
+        .unwrap()
+        .drain(..)
+        .for_each(|h| h.abort());
+}
+
 /// OpenVPN 3 backend state, one per NM connect() call.
 pub struct OpenVpn3Manager {
     config: ConnectionConfig,
@@ -140,12 +162,30 @@ impl OpenVpn3Manager {
 
         let cfgmgr =
             Proxy::new(&conn, SERVICE_CONFIGMGR, CONFIGMGR_PATH, SERVICE_CONFIGMGR).await?;
-        let cfg_path: OwnedObjectPath = cfgmgr
-            .call_method("Import", &(&cfg_name, &cfg_str, true, false))
-            .await
-            .with_context(|| format!("Importing OpenVPN profile {cfg_name}"))?
-            .body()
-            .deserialize::<OwnedObjectPath>()?;
+        // Right after boot the configmgr D-Bus service may still be
+        // activating ("Object does not exist at path …/configuration");
+        // retry briefly instead of failing the whole connect.
+        let mut imported = None;
+        for attempt in 0..3 {
+            match cfgmgr
+                .call_method("Import", &(&cfg_name, &cfg_str, true, false))
+                .await
+            {
+                Ok(reply) => {
+                    imported = Some(reply.body().deserialize::<OwnedObjectPath>()?);
+                    break;
+                }
+                Err(e) if attempt < 2 && e.to_string().contains("does not exist") => {
+                    warn!("Import failed ({e}); configmgr likely still booting, retrying");
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                }
+                Err(e) => {
+                    return Err(e).with_context(|| format!("Importing OpenVPN profile {cfg_name}"));
+                }
+            }
+        }
+        let cfg_path: OwnedObjectPath =
+            imported.with_context(|| format!("Importing OpenVPN profile {cfg_name}"))?;
         // Let NM own DNS (netcfg applies DNS itself otherwise).
         let cfg_obj = Proxy::new(
             &conn,
@@ -203,18 +243,18 @@ impl OpenVpn3Manager {
         // (connected_to missing), so resolve the first remote entry from the
         // connection data ourselves.
         let remote_raw = self.config.raw_data.get("remote").cloned();
-        tokio::spawn(watch_status(
+        register_session_task(tokio::spawn(watch_status(
             status_stream,
             sp,
             emitter,
             dbus_clone,
             remote_raw,
-        ));
+        )));
 
         // Tap the session Log signal (LogForward-ed from the backend) —
         // without a listener the verbosity data lands nowhere.
         if let Ok(log_stream) = session.receive_signal("Log").await {
-            tokio::spawn(async move {
+            register_session_task(tokio::spawn(async move {
                 let mut log_stream = log_stream;
                 while let Some(msg) = log_stream.next().await {
                     if let Ok((group, level, text)) = msg.body().deserialize::<(u32, u32, String)>()
@@ -223,7 +263,7 @@ impl OpenVpn3Manager {
                     }
                 }
                 info!("Log stream closed");
-            });
+            }));
         }
 
         // Mirror the openvpn3 session-start CLI: Ready() throws when the
@@ -406,10 +446,12 @@ fn open_in_browser(url: &str) {
             .spawn()
             .is_ok()
         {
+            info!("SSO browser opened (user {})", session.0);
             return;
         }
     }
     // Last resort / headless fallback.
+    warn!("SSO browser open fell back to bare xdg-open");
     let _ = std::process::Command::new("xdg-open")
         .arg(url)
         .stdout(std::process::Stdio::null())

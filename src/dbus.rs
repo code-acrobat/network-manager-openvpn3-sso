@@ -85,6 +85,11 @@ impl VpnPlugin {
 
         info!("Connecting to VPN: {} ({})", config.id, config.uuid);
 
+        // A new connection attempt supersedes everything from previous
+        // ones: abort stale runner/processor/watcher tasks so their
+        // watchdogs cannot fail a healthy connection later.
+        crate::openvpn3::abort_session_tasks();
+
         // Create event channel
         let (tx, rx) = mpsc::channel(100);
 
@@ -108,7 +113,7 @@ impl VpnPlugin {
         // Start connection in background
         let state_clone = self.inner_state.clone();
 
-        tokio::spawn(async move {
+        crate::openvpn3::register_session_task(tokio::spawn(async move {
             // Take manager temporarily to run connect
             let mut manager = {
                 let mut state = state_clone.write().await;
@@ -133,14 +138,14 @@ impl VpnPlugin {
                 let mut state = state_clone.write().await;
                 state.vpn_manager = manager;
             }
-        });
+        }));
 
         // Start event processing
         let emitter_state = self.inner_state.clone();
         let event_rx_clone = self.event_rx.clone();
         let conn_clone = self.connection.clone();
 
-        tokio::spawn(async move {
+        crate::openvpn3::register_session_task(tokio::spawn(async move {
             // Get connection for signal emission
             let conn = {
                 let guard = conn_clone.lock().await;
@@ -151,7 +156,7 @@ impl VpnPlugin {
             } else {
                 error!("No D-Bus connection available for event processing");
             }
-        });
+        }));
 
         Ok(())
     }
@@ -212,6 +217,15 @@ impl VpnPlugin {
         {
             warn!("Error during disconnect: {}", e);
         }
+
+        // Stop all background tasks (runner, event processor, status
+        // watcher, log stream). This also covers the case where the
+        // runner is still mid-connect holding the manager: aborting it
+        // prevents its watchdogs from firing later.
+        // # ponytail: a half-started backend session aborted mid-connect
+        // may linger (inert) until the next connect() cleans up same-name
+        // sessions; acceptable for a single-connection desktop plugin.
+        crate::openvpn3::abort_session_tasks();
 
         state.vpn_manager = None;
         state.current_config = None;
