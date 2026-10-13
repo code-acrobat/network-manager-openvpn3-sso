@@ -207,10 +207,10 @@ impl VpnPlugin {
         let mut state = self.inner_state.write().await;
         state.state = NMVpnServiceState::Stopping;
 
-        if let Some(ref mut manager) = state.vpn_manager {
-            if let Err(e) = manager.disconnect().await {
-                warn!("Error during disconnect: {}", e);
-            }
+        if let Some(ref mut manager) = state.vpn_manager
+            && let Err(e) = manager.disconnect().await
+        {
+            warn!("Error during disconnect: {}", e);
         }
 
         state.vpn_manager = None;
@@ -316,10 +316,10 @@ async fn process_vpn_events(
                 }
 
                 // Only emit state changes for certain transitions
-                if should_emit {
-                    if let Err(e) = emit_state_changed(&connection, nm_state as u32).await {
-                        warn!("Failed to emit StateChanged signal: {}", e);
-                    }
+                if should_emit
+                    && let Err(e) = emit_state_changed(&connection, nm_state as u32).await
+                {
+                    warn!("Failed to emit StateChanged signal: {}", e);
                 }
             }
             VpnEvent::AuthRequired { auth_url } => {
@@ -395,11 +395,11 @@ async fn emit_config(connection: &Connection, vpn_config: &VpnConfig) -> Result<
 
     // Add gateway (VPN server external IP) as u32 - this is the remote server
     // NetworkManager expects this as a u32 in network byte order
-    if let Some(ref gateway) = vpn_config.remote_ip {
-        if let Ok(addr) = gateway.parse::<std::net::Ipv4Addr>() {
-            let gw_u32: u32 = addr.into();
-            config.insert("gateway".to_string(), Value::new(gw_u32));
-        }
+    if let Some(ref gateway) = vpn_config.remote_ip
+        && let Ok(addr) = gateway.parse::<std::net::Ipv4Addr>()
+    {
+        let gw_u32: u32 = addr.into();
+        config.insert("gateway".to_string(), Value::new(gw_u32));
     }
 
     // Mark that we have IPv4 config
@@ -425,42 +425,42 @@ async fn emit_ip4_config(connection: &Connection, vpn_config: &VpnConfig) -> Res
     let mut config: HashMap<String, Value> = HashMap::new();
 
     // Add internal IP address (VPN address assigned to us)
-    if let Some(ref ip) = vpn_config.local_ip {
-        if let Ok(addr) = ip.parse::<std::net::Ipv4Addr>() {
-            // NetworkManager expects IPs as u32 (host byte order, which Ipv4Addr::into provides)
-            let ip_u32: u32 = addr.into();
-            config.insert("address".to_string(), Value::new(ip_u32));
+    if let Some(ref ip) = vpn_config.local_ip
+        && let Ok(addr) = ip.parse::<std::net::Ipv4Addr>()
+    {
+        // NetworkManager expects IPs as u32 (host byte order, which Ipv4Addr::into provides)
+        let ip_u32: u32 = addr.into();
+        config.insert("address".to_string(), Value::new(ip_u32));
 
-            // Prefix length from the actual netmask (255.255.224.0 → 19);
-            // /24 fallback.
-            let prefix: u32 = vpn_config
-                .netmask
-                .as_deref()
-                .and_then(|m| m.parse::<std::net::Ipv4Addr>().ok())
-                .map(|m| u32::from(m).count_ones())
-                .unwrap_or(24);
-            config.insert("prefix".to_string(), Value::new(prefix));
+        // Prefix length from the actual netmask (255.255.224.0 → 19);
+        // /24 fallback.
+        let prefix: u32 = vpn_config
+            .netmask
+            .as_deref()
+            .and_then(|m| m.parse::<std::net::Ipv4Addr>().ok())
+            .map(|m| u32::from(m).count_ones())
+            .unwrap_or(24);
+        config.insert("prefix".to_string(), Value::new(prefix));
 
-            let octets = addr.octets();
-            // Internal VPN gateway: prefer the value parsed from netcfg/ip
-            // (x.x.x.1 convention), fall back to .1 of our subnet.
-            let internal_gw = vpn_config
-                .gateway
-                .as_deref()
-                .and_then(|g| g.parse::<std::net::Ipv4Addr>().ok())
-                .unwrap_or_else(|| Ipv4Addr::new(octets[0], octets[1], octets[2], 1));
-            let internal_gw_u32: u32 = internal_gw.into();
-            config.insert("int-gw".to_string(), Value::new(internal_gw_u32));
-        }
+        let octets = addr.octets();
+        // Internal VPN gateway: prefer the value parsed from netcfg/ip
+        // (x.x.x.1 convention), fall back to .1 of our subnet.
+        let internal_gw = vpn_config
+            .gateway
+            .as_deref()
+            .and_then(|g| g.parse::<std::net::Ipv4Addr>().ok())
+            .unwrap_or_else(|| Ipv4Addr::new(octets[0], octets[1], octets[2], 1));
+        let internal_gw_u32: u32 = internal_gw.into();
+        config.insert("int-gw".to_string(), Value::new(internal_gw_u32));
     }
 
     // Add VPN server's public/external gateway address for routing
     // This tells NM where VPN traffic should be routed through
-    if let Some(ref gateway) = vpn_config.remote_ip {
-        if let Ok(gw_addr) = gateway.parse::<std::net::Ipv4Addr>() {
-            let gw_u32: u32 = gw_addr.into();
-            config.insert("gateway".to_string(), Value::new(gw_u32));
-        }
+    if let Some(ref gateway) = vpn_config.remote_ip
+        && let Ok(gw_addr) = gateway.parse::<std::net::Ipv4Addr>()
+    {
+        let gw_u32: u32 = gw_addr.into();
+        config.insert("gateway".to_string(), Value::new(gw_u32));
     }
 
     // Add DNS servers

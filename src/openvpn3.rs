@@ -366,10 +366,7 @@ async fn last_status(session: &Proxy<'_>) -> Option<(u32, u32, String)> {
 fn extract_url(msg: &str) -> Option<String> {
     msg.split_whitespace()
         .find(|t| t.starts_with("http://") || t.starts_with("https://"))
-        .map(|s| {
-            s.trim_end_matches(|c| matches!(c, ',' | '.' | ')' | ';'))
-                .to_string()
-        })
+        .map(|s| s.trim_end_matches([',', '.', ')', ';']).to_string())
 }
 
 /// Epoch-millis of the last browser open — both the post-Connect status
@@ -425,6 +422,10 @@ fn open_in_browser(url: &str) {
 /// reads of other users fail): filesystem conventions only.
 const X_SOCKET_DIR: &str = "/tmp/.X11-unix";
 
+/// Graphical session candidate for env discovery: (uid, evidence score,
+/// username, env pairs needed to reach that session).
+type GraphicalCandidate = (u32, u8, String, Vec<(String, String)>);
+
 /// (username, [env pairs needed to reach the graphical session])
 fn find_graphical_session() -> Option<(String, Vec<(String, String)>)> {
     let mut dirs: Vec<(u32, String)> = std::fs::read_dir("/run/user")
@@ -443,7 +444,7 @@ fn find_graphical_session() -> Option<(String, Vec<(String, String)>)> {
     dirs.sort();
     // WINNER: most graphical evidence, ties broken by higher uid
     // (real desktop users sort above service accounts).
-    let mut candidates: Vec<(u32, u8, String, Vec<(String, String)>)> = Vec::new();
+    let mut candidates: Vec<GraphicalCandidate> = Vec::new();
     for (uid, _) in dirs {
         let runtime = format!("/run/user/{uid}");
         let mut env: Vec<(String, String)> = vec![
@@ -696,11 +697,11 @@ async fn watch_status(
                 open_in_browser(&url);
             }
         }
-        if let Some(ev) = event {
-            if event_tx.send(ev).await.is_err() {
-                info!("Event consumer gone; stopping status watch");
-                return;
-            }
+        if let Some(ev) = event
+            && event_tx.send(ev).await.is_err()
+        {
+            info!("Event consumer gone; stopping status watch");
+            return;
         }
 
         if (major, minor) == (MAJOR_CONN, MINOR_CONN_CONNECTED) {
@@ -802,11 +803,11 @@ async fn collect_vpn_config(session: &Proxy<'_>, remote_raw: Option<&str>) -> Re
     }
 
     // Fallback scrape when the netcfg property was inaccessible/empty.
-    if parser.local_ip.is_none() {
-        if let Ok((ip, prefix)) = scrape_tun_address(&device_name) {
-            parser.local_ip = Some(ip);
-            parser.prefix = Some(prefix);
-        }
+    if parser.local_ip.is_none()
+        && let Ok((ip, prefix)) = scrape_tun_address(&device_name)
+    {
+        parser.local_ip = Some(ip);
+        parser.prefix = Some(prefix);
     }
     if parser.gateway.is_none() && parser.local_ip.is_some() {
         // Link-local convention used by the server's netcfg (x.x.x.1).
@@ -894,10 +895,8 @@ impl NetCfgParser {
                         }
                     }
                 }
-                "gateway" => {
-                    if self.gateway.is_none() {
-                        self.first_ip_in(v);
-                    }
+                "gateway" if self.gateway.is_none() => {
+                    self.first_ip_in(v);
                 }
                 _ => {}
             }
@@ -921,7 +920,7 @@ impl NetCfgParser {
             Value::Value(inner) => self.first_ip_in(inner.as_ref()),
             Value::Array(a) => {
                 for item in a.iter() {
-                    self.first_ip_in(&item);
+                    self.first_ip_in(item);
                     if self.gateway.is_some() {
                         return;
                     }
@@ -937,7 +936,7 @@ impl NetCfgParser {
             }
             Value::Structure(s) => {
                 for f in s.fields() {
-                    self.first_ip_in(&f);
+                    self.first_ip_in(f);
                     if self.gateway.is_some() {
                         return;
                     }
@@ -952,7 +951,7 @@ impl NetCfgParser {
 fn tuple_list(v: &Value<'_>) -> Vec<(String, u32, String)> {
     match v {
         Value::Value(inner) => tuple_list(inner.as_ref()),
-        Value::Array(a) => a.iter().flat_map(|e| tuple_list(&e)).collect(),
+        Value::Array(a) => a.iter().flat_map(|e| tuple_list(e)).collect(),
         Value::Structure(s) if s.fields().len() == 3 => {
             let f = s.fields();
             let (Ok(ip), Ok(prefix), Ok(gw)) = (
