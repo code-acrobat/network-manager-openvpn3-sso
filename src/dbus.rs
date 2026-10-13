@@ -3,13 +3,13 @@
 
 //! D-Bus interface implementing NetworkManager VPN Plugin
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, mpsc};
 use tracing::{debug, error, info, warn};
 use zbus::zvariant::OwnedValue;
-use zbus::{interface, Connection};
+use zbus::{Connection, interface};
 
 use crate::config::ConnectionConfig;
 use crate::openvpn3::{OpenVpn3Manager, VpnConfig, VpnEvent, VpnState};
@@ -381,10 +381,7 @@ async fn emit_state_changed(connection: &Connection, state: u32) -> Result<()> {
 }
 
 /// Emit Config signal with tunnel device info
-async fn emit_config(
-    connection: &Connection,
-    vpn_config: &VpnConfig,
-) -> Result<()> {
+async fn emit_config(connection: &Connection, vpn_config: &VpnConfig) -> Result<()> {
     use zbus::zvariant::Value;
 
     let mut config: HashMap<String, Value> = HashMap::new();
@@ -422,10 +419,7 @@ async fn emit_config(
 }
 
 /// Emit Ip4Config signal
-async fn emit_ip4_config(
-    connection: &Connection,
-    vpn_config: &VpnConfig,
-) -> Result<()> {
+async fn emit_ip4_config(connection: &Connection, vpn_config: &VpnConfig) -> Result<()> {
     use zbus::zvariant::Value;
 
     let mut config: HashMap<String, Value> = HashMap::new();

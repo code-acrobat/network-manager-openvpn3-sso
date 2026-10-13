@@ -16,13 +16,13 @@
 //! setup, routes and DNS (no supported way to hand that to NetworkManager);
 //! this plugin only reads the resulting configuration and relays it to NM.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use futures::StreamExt;
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tracing::{debug, error, info, warn};
 use zbus::zvariant::{Dict, OwnedObjectPath, OwnedValue, Value};
 use zbus::{Connection, Proxy};
@@ -138,7 +138,8 @@ impl OpenVpn3Manager {
         *self.profile_name.lock().await = Some(cfg_name.clone());
         info!("Importing profile '{}' as single-use config", cfg_name);
 
-        let cfgmgr = Proxy::new(&conn, SERVICE_CONFIGMGR, CONFIGMGR_PATH, SERVICE_CONFIGMGR).await?;
+        let cfgmgr =
+            Proxy::new(&conn, SERVICE_CONFIGMGR, CONFIGMGR_PATH, SERVICE_CONFIGMGR).await?;
         let cfg_path: OwnedObjectPath = cfgmgr
             .call_method("Import", &(&cfg_name, &cfg_str, true, false))
             .await
@@ -146,7 +147,13 @@ impl OpenVpn3Manager {
             .body()
             .deserialize::<OwnedObjectPath>()?;
         // Let NM own DNS (netcfg applies DNS itself otherwise).
-        let cfg_obj = Proxy::new(&conn, SERVICE_CONFIGMGR, cfg_path.clone(), SERVICE_CONFIGMGR).await?;
+        let cfg_obj = Proxy::new(
+            &conn,
+            SERVICE_CONFIGMGR,
+            cfg_path.clone(),
+            SERVICE_CONFIGMGR,
+        )
+        .await?;
         if let Err(e) = cfg_obj
             .call_method("SetOverride", &("dns-setup-disabled", Value::from(true)))
             .await
@@ -159,16 +166,23 @@ impl OpenVpn3Manager {
         // `openvpn3 session-start`) makes NewTunnel fail with "already running".
         disconnect_profile_sessions(&conn, &cfg_name).await;
 
-        let session_path: OwnedObjectPath = Proxy::new(&conn, SERVICE_SESSIONS, SESSIONS_PATH, SERVICE_SESSIONS)
-            .await?
-            .call_method("NewTunnel", &(cfg_path.clone(),))
-            .await
-            .context("Creating OpenVPN 3 session")?
-            .body()
-            .deserialize::<OwnedObjectPath>()?;
+        let session_path: OwnedObjectPath =
+            Proxy::new(&conn, SERVICE_SESSIONS, SESSIONS_PATH, SERVICE_SESSIONS)
+                .await?
+                .call_method("NewTunnel", &(cfg_path.clone(),))
+                .await
+                .context("Creating OpenVPN 3 session")?
+                .body()
+                .deserialize::<OwnedObjectPath>()?;
         info!("Session created: {session_path}");
 
-        let session = Proxy::new(&conn, SERVICE_SESSIONS, session_path.clone(), SERVICE_SESSIONS).await?;
+        let session = Proxy::new(
+            &conn,
+            SERVICE_SESSIONS,
+            session_path.clone(),
+            SERVICE_SESSIONS,
+        )
+        .await?;
         // Subscribe *before* touching the session so no transition is missed.
         let status_stream = session.receive_signal("StatusChange").await?;
         // Raise backend log verbosity and forward session logs — without this
@@ -189,7 +203,13 @@ impl OpenVpn3Manager {
         // (connected_to missing), so resolve the first remote entry from the
         // connection data ourselves.
         let remote_raw = self.config.raw_data.get("remote").cloned();
-        tokio::spawn(watch_status(status_stream, sp, emitter, dbus_clone, remote_raw));
+        tokio::spawn(watch_status(
+            status_stream,
+            sp,
+            emitter,
+            dbus_clone,
+            remote_raw,
+        ));
 
         // Tap the session Log signal (LogForward-ed from the backend) —
         // without a listener the verbosity data lands nowhere.
@@ -197,7 +217,8 @@ impl OpenVpn3Manager {
             tokio::spawn(async move {
                 let mut log_stream = log_stream;
                 while let Some(msg) = log_stream.next().await {
-                    if let Ok((group, level, text)) = msg.body().deserialize::<(u32, u32, String)>() {
+                    if let Ok((group, level, text)) = msg.body().deserialize::<(u32, u32, String)>()
+                    {
                         info!("backend[{group}/{level}] {text}");
                     }
                 }
@@ -345,7 +366,10 @@ async fn last_status(session: &Proxy<'_>) -> Option<(u32, u32, String)> {
 fn extract_url(msg: &str) -> Option<String> {
     msg.split_whitespace()
         .find(|t| t.starts_with("http://") || t.starts_with("https://"))
-        .map(|s| s.trim_end_matches(|c| matches!(c, ',' | '.' | ')' | ';')).to_string())
+        .map(|s| {
+            s.trim_end_matches(|c| matches!(c, ',' | '.' | ')' | ';'))
+                .to_string()
+        })
 }
 
 /// Epoch-millis of the last browser open — both the post-Connect status
@@ -379,7 +403,8 @@ fn open_in_browser(url: &str) {
         for (k, v) in &session.1 {
             cmd.env(k, v);
         }
-        if cmd.stdout(std::process::Stdio::null())
+        if cmd
+            .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
             .is_ok()
@@ -407,7 +432,10 @@ fn find_graphical_session() -> Option<(String, Vec<(String, String)>)> {
         .filter_map(|d| d.ok())
         .filter_map(|d| {
             let name = d.file_name().into_string().ok()?;
-            name.parse::<u32>().ok().filter(|&u| u != 0).map(|u| (u, name))
+            name.parse::<u32>()
+                .ok()
+                .filter(|&u| u != 0)
+                .map(|u| (u, name))
         })
         .collect();
     // Sorted so the pick is deterministic even with several logged-in
@@ -420,7 +448,10 @@ fn find_graphical_session() -> Option<(String, Vec<(String, String)>)> {
         let runtime = format!("/run/user/{uid}");
         let mut env: Vec<(String, String)> = vec![
             ("XDG_RUNTIME_DIR".into(), runtime.clone()),
-            ("DBUS_SESSION_BUS_ADDRESS".into(), format!("unix:path={runtime}/bus")),
+            (
+                "DBUS_SESSION_BUS_ADDRESS".into(),
+                format!("unix:path={runtime}/bus"),
+            ),
         ];
         let mut evidence = 0;
         let wayland = format!("{runtime}/wayland-0");
@@ -465,27 +496,42 @@ fn find_graphical_session() -> Option<(String, Vec<(String, String)>)> {
 mod browser_tests {
     use super::*;
 
-    /// Live self-check: there must be a graphical session on this desktop.
+    /// Live self-check: on a machine with a graphical session the discovery
+    /// must find it (non-root, display env set); on headless environments
+    /// (CI, containers) there is nothing to find and the test skips.
     #[test]
     fn finds_desktop_session_env() {
-        let session = find_graphical_session().expect("no graphical session found");
-        assert_ne!(session.0, "root", "picked root, not a desktop user");
-        let keys: Vec<String> = session.1.iter().map(|(k, _)| k.clone()).collect();
-        assert!(keys.contains(&"DISPLAY".to_string()) || keys.contains(&"WAYLAND_DISPLAY".to_string()));
+        match find_graphical_session() {
+            None => {
+                assert!(
+                    std::fs::read_dir("/run/user")
+                        .map(|d| d.count())
+                        .unwrap_or(0)
+                        <= 1,
+                    "graphical users exist but no session was discovered"
+                );
+            }
+            Some(session) => {
+                assert_ne!(session.0, "root", "picked root, not a desktop user");
+                let keys: Vec<String> = session.1.iter().map(|(k, _)| k.clone()).collect();
+                assert!(
+                    keys.contains(&"DISPLAY".to_string())
+                        || keys.contains(&"WAYLAND_DISPLAY".to_string())
+                );
+            }
+        }
     }
 }
 
 fn passwd_user(uid: u32) -> Option<String> {
     let passwd = std::fs::read_to_string("/etc/passwd").ok()?;
-    passwd
-        .lines()
-        .find_map(|line| {
-            let mut parts = line.split(':');
-            let name = parts.next()?;
-            let _ = parts.next()?;
-            let uid_field = parts.next()?;
-            (uid_field == uid.to_string()).then(|| name.to_string())
-        })
+    passwd.lines().find_map(|line| {
+        let mut parts = line.split(':');
+        let name = parts.next()?;
+        let _ = parts.next()?;
+        let uid_field = parts.next()?;
+        (uid_field == uid.to_string()).then(|| name.to_string())
+    })
 }
 
 async fn watch_status(
@@ -529,8 +575,13 @@ async fn watch_status(
             let _ = event_tx.send(VpnEvent::Failed(reason.into())).await;
             let conn = dbus.lock().await.clone();
             if let Some(conn) = conn
-                && let Ok(s) =
-                    Proxy::new(&conn, SERVICE_SESSIONS, session_path.clone(), SERVICE_SESSIONS).await
+                && let Ok(s) = Proxy::new(
+                    &conn,
+                    SERVICE_SESSIONS,
+                    session_path.clone(),
+                    SERVICE_SESSIONS,
+                )
+                .await
             {
                 let _ = s.call_method("Disconnect", &()).await;
             }
@@ -602,9 +653,9 @@ async fn watch_status(
             (MAJOR_SESS, MINOR_SESS_AUTH_USERPASS) | (MAJOR_SESS, MINOR_SESS_AUTH_CHALLENGE) => {
                 Some(VpnEvent::State(VpnState::NeedAuth))
             }
-            (MAJOR_CFG, MINOR_CFG_ERROR) | (MAJOR_CFG, MINOR_CFG_INLINE_MISSING) => {
-                Some(VpnEvent::Failed(format!("Invalid configuration: {message}")))
-            }
+            (MAJOR_CFG, MINOR_CFG_ERROR) | (MAJOR_CFG, MINOR_CFG_INLINE_MISSING) => Some(
+                VpnEvent::Failed(format!("Invalid configuration: {message}")),
+            ),
             (MAJOR_CONN, MINOR_CONN_FAILED) => {
                 Some(VpnEvent::Failed(format!("Connection failed: {message}")))
             }
@@ -618,8 +669,13 @@ async fn watch_status(
         if fatal {
             let conn = dbus.lock().await.clone();
             if let Some(conn) = conn
-                && let Ok(s) =
-                    Proxy::new(&conn, SERVICE_SESSIONS, session_path.clone(), SERVICE_SESSIONS).await
+                && let Ok(s) = Proxy::new(
+                    &conn,
+                    SERVICE_SESSIONS,
+                    session_path.clone(),
+                    SERVICE_SESSIONS,
+                )
+                .await
             {
                 let _ = s.call_method("Disconnect", &()).await;
             }
@@ -651,10 +707,16 @@ async fn watch_status(
             saw_connected = true;
             let conn = dbus.lock().await.clone();
             if let Some(conn) = conn {
-                let session_proxy =
-                    Proxy::new(&conn, SERVICE_SESSIONS, session_path.clone(), SERVICE_SESSIONS).await;
+                let session_proxy = Proxy::new(
+                    &conn,
+                    SERVICE_SESSIONS,
+                    session_path.clone(),
+                    SERVICE_SESSIONS,
+                )
+                .await;
                 if let Ok(session_proxy) = session_proxy {
-                    let cfg = match collect_vpn_config(&session_proxy, remote_raw.as_deref()).await {
+                    let cfg = match collect_vpn_config(&session_proxy, remote_raw.as_deref()).await
+                    {
                         Ok(cfg) => cfg,
                         Err(e) => {
                             error!("Failed to collect VPN configuration: {e:#}");
@@ -690,9 +752,10 @@ async fn collect_vpn_config(session: &Proxy<'_>, remote_raw: Option<&str>) -> Re
         .get_property("device_path")
         .await
         .map_err(|e| anyhow!("device_path: {e}"))?;
-    let device_path: OwnedObjectPath = zbus::zvariant::ObjectPath::try_from(device_path_str.as_str())
-        .map_err(|e| anyhow!("device_path value: {e}"))?
-        .into();
+    let device_path: OwnedObjectPath =
+        zbus::zvariant::ObjectPath::try_from(device_path_str.as_str())
+            .map_err(|e| anyhow!("device_path value: {e}"))?
+            .into();
     // connected_to = (proto, server_ip, server_port) — openvpn3 v20 does NOT
     // expose this property (No such property), so treat it as optional and
     // fall back to resolving the first remote entry from the connection data.
@@ -704,9 +767,14 @@ async fn collect_vpn_config(session: &Proxy<'_>, remote_raw: Option<&str>) -> Re
         .map(|t| t.1)
         .or_else(|| remote_raw.and_then(resolve_remote));
 
-    let netcfg = Proxy::new(session.connection(), SERVICE_NETCFG, device_path, SERVICE_NETCFG)
-        .await
-        .map_err(|e| anyhow!("netcfg proxy: {e}"))?;
+    let netcfg = Proxy::new(
+        session.connection(),
+        SERVICE_NETCFG,
+        device_path,
+        SERVICE_NETCFG,
+    )
+    .await
+    .map_err(|e| anyhow!("netcfg proxy: {e}"))?;
     let dns_servers: Vec<String> = netcfg
         .get_property("dns_name_servers")
         .await
@@ -715,7 +783,10 @@ async fn collect_vpn_config(session: &Proxy<'_>, remote_raw: Option<&str>) -> Re
         .get_property("dns_search_domains")
         .await
         .unwrap_or_default();
-    let network_config = netcfg.get_property::<OwnedValue>("network_config").await.ok();
+    let network_config = netcfg
+        .get_property::<OwnedValue>("network_config")
+        .await
+        .ok();
     if let Some(ref nc) = network_config {
         debug!("network_config = {nc:?}");
     }
@@ -925,7 +996,11 @@ fn build_profile_text(raw: &HashMap<String, String>) -> String {
                 continue;
             };
             let proto = parts.next().unwrap_or("udp");
-            let proto = if proto.starts_with("tcp") { "tcp" } else { "udp" };
+            let proto = if proto.starts_with("tcp") {
+                "tcp"
+            } else {
+                "udp"
+            };
             text.push_str(&format!("remote {host} {port} {proto}\n"));
         }
     }
@@ -958,10 +1033,18 @@ fn build_profile_text(raw: &HashMap<String, String>) -> String {
     if let Some(v) = raw.get("reneg-seconds") {
         text.push_str(&format!("reneg-sec {v}\n"));
     }
-    if raw.get("push-peer-info").map(|v| v == "yes").unwrap_or(false) {
+    if raw
+        .get("push-peer-info")
+        .map(|v| v == "yes")
+        .unwrap_or(false)
+    {
         text.push_str("push-peer-info\n");
     }
-    if raw.get("connection-type").map(|v| v == "password").unwrap_or(false) {
+    if raw
+        .get("connection-type")
+        .map(|v| v == "password")
+        .unwrap_or(false)
+    {
         text.push_str("auth-user-pass\n");
     }
     text
@@ -969,7 +1052,10 @@ fn build_profile_text(raw: &HashMap<String, String>) -> String {
 
 fn read_inline(path: Option<&String>) -> Option<String> {
     let p = path?;
-    std::fs::read_to_string(p).ok().map(|c| c.trim().to_string()).filter(|c| !c.is_empty())
+    std::fs::read_to_string(p)
+        .ok()
+        .map(|c| c.trim().to_string())
+        .filter(|c| !c.is_empty())
 }
 
 /// Write the synthesized profile to a plugin-private file and return its path.
@@ -1000,7 +1086,11 @@ mod tests {
     fn synthesizes_remotes_directives_and_sections() {
         let dir = std::env::temp_dir();
         let ca = dir.join("nm-sso-test-ca.pem");
-        std::fs::write(&ca, "-----BEGIN CERTIFICATE-----\nTESTCA\n-----END CERTIFICATE-----\n").unwrap();
+        std::fs::write(
+            &ca,
+            "-----BEGIN CERTIFICATE-----\nTESTCA\n-----END CERTIFICATE-----\n",
+        )
+        .unwrap();
 
         let raw: HashMap<String, String> = HashMap::from([
             (
