@@ -1,0 +1,5 @@
+[VPN Connection]
+name=openvpn3-sso
+service=org.freedesktop.NetworkManager.openvpn3-sso
+program=/usr/lib/nm-openvpn3-sso-service
+supports-multiple-connections=false

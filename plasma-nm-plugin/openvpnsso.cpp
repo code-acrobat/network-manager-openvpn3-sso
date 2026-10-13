@@ -80,7 +80,7 @@ VpnUiPlugin::ImportResult OpenVpnSsoUiPlugin::importConnectionSettings(const QSt
     nm_connection_add_setting(connection, NM_SETTING(sVpn));
 
     g_object_set(sVpn,
-                 NM_SETTING_VPN_SERVICE_TYPE, "org.freedesktop.NetworkManager.openvpn-sso",
+                 NM_SETTING_VPN_SERVICE_TYPE, "org.freedesktop.NetworkManager.openvpn3-sso",
                  nullptr);
     nm_setting_vpn_add_data_item(sVpn, "config", absolutePath.toUtf8().constData());
 

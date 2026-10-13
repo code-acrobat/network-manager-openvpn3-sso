@@ -15,5 +15,5 @@
         "Version": "0.2.0",
         "Website": "https://github.com/quinnjr/network-manager-openvpn-sso"
     },
-    "X-NetworkManager-Services": "org.freedesktop.NetworkManager.openvpn-sso"
+    "X-NetworkManager-Services": "org.freedesktop.NetworkManager.openvpn3-sso"
 }

@@ -1,17 +1,17 @@
 [package]
-name = "nm-openvpn-sso"
-version = "0.3.1"
-edition = "2021"
+name = "nm-openvpn3-sso"
+version = "0.4.15"
+edition = "2024"
 authors = ["Joseph R. Quinn <quinn.josephr@protonmail.com>"]
 license = "MIT"
-description = "NetworkManager VPN plugin for OpenVPN with SSO/OAuth authentication"
+description = "NetworkManager VPN plugin for the OpenVPN 3 Linux client with SSO web authentication"
 repository = "https://github.com/quinnjr/network-manager-openvpn-sso"
 homepage = "https://github.com/quinnjr/network-manager-openvpn-sso"
 keywords = ["networkmanager", "openvpn", "sso", "oauth", "vpn"]
 categories = ["network-programming", "authentication"]
 
 [[bin]]
-name = "nm-openvpn-sso-service"
+name = "nm-openvpn3-sso-service"
 path = "src/main.rs"
 
 [dependencies]
@@ -21,25 +21,13 @@ tokio = { version = "1", features = ["full"] }
 # D-Bus
 zbus = { version = "5", default-features = false, features = ["tokio"] }
 
-# HTTP server for OAuth callback
-axum = "0.8"
-tower = "0.5"
-
-# HTTP client for forwarding OAuth code to VPN server
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-
-# Secrets/keyring
-secret-service = { version = "5", features = ["rt-tokio-crypto-rust"] }
-
-# Browser opening
-open = "5"
+# Streaming
+futures = "0.3"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
 
 # Error handling
-thiserror = "2"
 anyhow = "1"
 
 # Logging
@@ -47,54 +35,47 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-journald = "0.3"
 
-# URL handling
-url = "2"
-
-# Utilities
-uuid = { version = "1", features = ["v4"] }
-futures = "0.3"
-notify-rust = "4"
-
 [profile.release]
 lto = true
 strip = true
 
 # Debian package configuration (cargo-deb)
 [package.metadata.deb]
-name = "networkmanager-openvpn-sso"
+name = "networkmanager-openvpn3-sso"
 maintainer = "Joseph R. Quinn <quinn.josephr@protonmail.com>"
 copyright = "2026, Joseph R. Quinn"
 license-file = ["LICENSE", "0"]
 extended-description = """\
-A NetworkManager VPN plugin that adds OAuth 2.0 / OIDC Single Sign-On \
-support for OpenVPN connections. Features include browser-based SSO \
-authentication, automatic OAuth configuration discovery from OpenVPN \
-servers, session token caching, and desktop notifications."""
-depends = "$auto, openvpn, network-manager"
+A NetworkManager VPN plugin that runs VPN sessions through the OpenVPN 3 \
+Linux client (openvpn3 D-Bus services), enabling server-driven web / SSO \
+authentication (e.g. Yubikey) that the openvpn2 management-interface plugin \
+cannot support. Profiles are imported into the openvpn3 configuration \
+manager and session state is relayed to NetworkManager."""
+depends = "$auto, openvpn3, network-manager"
 section = "net"
 priority = "optional"
 assets = [
-    ["target/release/nm-openvpn-sso-service", "/usr/lib/nm-openvpn-sso-service", "755"],
-    ["data/nm-openvpn-sso-service.name", "/usr/lib/NetworkManager/VPN/nm-openvpn-sso-service.name", "644"],
-    ["data/org.freedesktop.NetworkManager.openvpn-sso.conf", "/usr/share/dbus-1/system.d/nm-openvpn-sso-service.conf", "644"],
+    ["target/release/nm-openvpn3-sso-service", "/usr/lib/nm-openvpn3-sso-service", "755"],
+    ["data/nm-openvpn3-sso-service.name", "/usr/lib/NetworkManager/VPN/nm-openvpn3-sso-service.name", "644"],
+    ["data/org.freedesktop.NetworkManager.openvpn3-sso.conf", "/usr/share/dbus-1/system.d/nm-openvpn3-sso-service.conf", "644"],
     ["data/vpn-sso-connect.sh", "/usr/bin/vpn-sso-connect", "755"],
     ["data/vpn-sso-connect.desktop", "/usr/share/applications/vpn-sso-connect.desktop", "644"],
-    ["LICENSE", "/usr/share/doc/networkmanager-openvpn-sso/LICENSE", "644"],
+    ["LICENSE", "/usr/share/doc/networkmanager-openvpn3-sso/LICENSE", "644"],
 ]
 
 # RPM package configuration (cargo-generate-rpm)
 [package.metadata.generate-rpm]
-name = "networkmanager-openvpn-sso"
+name = "networkmanager-openvpn3-sso"
 license = "MIT"
 assets = [
-    { source = "target/release/nm-openvpn-sso-service", dest = "/usr/lib/nm-openvpn-sso-service", mode = "755" },
-    { source = "data/nm-openvpn-sso-service.name", dest = "/usr/lib/NetworkManager/VPN/nm-openvpn-sso-service.name", mode = "644" },
-    { source = "data/org.freedesktop.NetworkManager.openvpn-sso.conf", dest = "/usr/share/dbus-1/system.d/nm-openvpn-sso-service.conf", mode = "644" },
+    { source = "target/release/nm-openvpn3-sso-service", dest = "/usr/lib/nm-openvpn3-sso-service", mode = "755" },
+    { source = "data/nm-openvpn3-sso-service.name", dest = "/usr/lib/NetworkManager/VPN/nm-openvpn3-sso-service.name", mode = "644" },
+    { source = "data/org.freedesktop.NetworkManager.openvpn3-sso.conf", dest = "/usr/share/dbus-1/system.d/nm-openvpn3-sso-service.conf", mode = "644" },
     { source = "data/vpn-sso-connect.sh", dest = "/usr/bin/vpn-sso-connect", mode = "755" },
     { source = "data/vpn-sso-connect.desktop", dest = "/usr/share/applications/vpn-sso-connect.desktop", mode = "644" },
-    { source = "LICENSE", dest = "/usr/share/licenses/networkmanager-openvpn-sso/LICENSE", mode = "644", doc = true },
+    { source = "LICENSE", dest = "/usr/share/licenses/networkmanager-openvpn3-sso/LICENSE", mode = "644", doc = true },
 ]
 
 [package.metadata.generate-rpm.requires]
 NetworkManager = "*"
-openvpn = "*"
+openvpn3 = "*"

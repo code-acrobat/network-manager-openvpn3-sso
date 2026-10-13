@@ -123,8 +123,8 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v7
         with:
-          name: nm-openvpn-sso-service-linux-x86_64
-          path: target/release/nm-openvpn-sso-service
+          name: nm-openvpn3-sso-service-linux-x86_64
+          path: target/release/nm-openvpn3-sso-service
           if-no-files-found: error
 
   test:

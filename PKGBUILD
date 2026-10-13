@@ -1,5 +1,5 @@
 # Maintainer: Joseph R. Quinn <quinn.josephr@protonmail.com>
-pkgname=networkmanager-openvpn-sso
+pkgname=networkmanager-openvpn3-sso
 pkgver=0.3.1
 pkgrel=1
 pkgdesc="NetworkManager VPN plugin for OpenVPN with SSO/OAuth authentication"
@@ -9,8 +9,8 @@ license=('MIT')
 depends=('networkmanager' 'openvpn' 'libsecret' 'dbus')
 makedepends=('cargo' 'rust' 'extra-cmake-modules' 'qt6-base' 'networkmanager-qt' 'kio' 'ki18n' 'kcoreaddons')
 optdepends=('plasma-nm: KDE Plasma network manager integration')
-provides=('networkmanager-openvpn-sso')
-conflicts=('networkmanager-openvpn-sso-git')
+provides=('networkmanager-openvpn3-sso')
+conflicts=('networkmanager-openvpn3-sso-git')
 # !lto: makepkg's -flto CFLAGS produce GCC bitcode objects for ring's C code
 # that rust's lld cannot link (undefined ring_core_* symbols)
 options=('!lto')
@@ -32,16 +32,16 @@ package() {
     cd "$startdir"
 
     # Install binary (same location pattern as nm-openvpn-service)
-    install -Dm755 "target/release/nm-openvpn-sso-service" \
-        "$pkgdir/usr/lib/nm-openvpn-sso-service"
+    install -Dm755 "target/release/nm-openvpn3-sso-service" \
+        "$pkgdir/usr/lib/nm-openvpn3-sso-service"
 
     # Install NetworkManager VPN plugin name file
-    install -Dm644 "data/nm-openvpn-sso-service.name" \
-        "$pkgdir/usr/lib/NetworkManager/VPN/nm-openvpn-sso-service.name"
+    install -Dm644 "data/nm-openvpn3-sso-service.name" \
+        "$pkgdir/usr/lib/NetworkManager/VPN/nm-openvpn3-sso-service.name"
 
     # Install D-Bus policy (allows root to own the bus name)
-    install -Dm644 "data/org.freedesktop.NetworkManager.openvpn-sso.conf" \
-        "$pkgdir/usr/share/dbus-1/system.d/nm-openvpn-sso-service.conf"
+    install -Dm644 "data/org.freedesktop.NetworkManager.openvpn3-sso.conf" \
+        "$pkgdir/usr/share/dbus-1/system.d/nm-openvpn3-sso-service.conf"
 
     # Install helper script for KDE/CLI users
     install -Dm755 "data/vpn-sso-connect.sh" \

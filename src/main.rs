@@ -3,9 +3,7 @@
 
 mod config;
 mod dbus;
-mod oauth;
-mod openvpn;
-mod secrets;
+mod openvpn3;
 
 use anyhow::Result;
 use tracing::info;
@@ -27,7 +25,7 @@ async fn main() -> Result<()> {
             .init();
     }
 
-    info!("Starting nm-openvpn-sso-service");
+    info!("Starting nm-openvpn3-sso-service");
 
     // Start the D-Bus service
     dbus::run_service().await?;

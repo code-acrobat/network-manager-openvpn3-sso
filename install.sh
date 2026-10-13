@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Joseph R. Quinn
 #
-# Install script for nm-openvpn-sso NetworkManager plugin
+# Install script for nm-openvpn3-sso NetworkManager plugin
 
 set -euo pipefail
 
@@ -34,14 +34,14 @@ DESKTOP_DIR="$PREFIX/share/applications"
 BIN_DIR="$PREFIX/bin"
 
 # Build the project
-info "Building nm-openvpn-sso..."
+info "Building nm-openvpn3-sso..."
 if command -v cargo &> /dev/null; then
     cargo build --release
 else
     error "Cargo not found. Please install Rust: https://rustup.rs/"
 fi
 
-BINARY="target/release/nm-openvpn-sso-service"
+BINARY="target/release/nm-openvpn3-sso-service"
 if [[ ! -f "$BINARY" ]]; then
     error "Build failed - binary not found"
 fi
@@ -56,15 +56,15 @@ mkdir -p "$BIN_DIR"
 
 # Install binary
 info "Installing binary to $NM_PLUGIN_DIR..."
-install -m 755 "$BINARY" "$NM_PLUGIN_DIR/nm-openvpn-sso-service"
+install -m 755 "$BINARY" "$NM_PLUGIN_DIR/nm-openvpn3-sso-service"
 
 # Install NetworkManager plugin file
 info "Installing NetworkManager plugin configuration..."
-install -m 644 data/nm-openvpn-sso-service.name "$NM_VPN_DIR/"
+install -m 644 data/nm-openvpn3-sso-service.name "$NM_VPN_DIR/"
 
 # Install D-Bus policy
 info "Installing D-Bus policy..."
-install -m 644 data/org.freedesktop.NetworkManager.openvpn-sso.conf "$DBUS_SYSTEM_CONF/"
+install -m 644 data/org.freedesktop.NetworkManager.openvpn3-sso.conf "$DBUS_SYSTEM_CONF/"
 
 # Install helper script
 info "Installing VPN helper script..."
@@ -111,7 +111,7 @@ echo "The OpenVPN SSO plugin is now available in NetworkManager."
 echo ""
 echo "To add a VPN connection:"
 echo "  nmcli connection import type openvpn file your-config.ovpn"
-echo "  nmcli connection modify \"connection-name\" vpn.service-type org.freedesktop.NetworkManager.openvpn-sso"
+echo "  nmcli connection modify \"connection-name\" vpn.service-type org.freedesktop.NetworkManager.openvpn3-sso"
 echo ""
 echo "To connect:"
 echo "  nmcli connection up \"connection-name\""

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Joseph R. Quinn
 #
-# Uninstall script for nm-openvpn-sso NetworkManager plugin
+# Uninstall script for nm-openvpn3-sso NetworkManager plugin
 
 set -euo pipefail
 
@@ -22,9 +22,9 @@ LIBDIR="${LIBDIR:-$PREFIX/lib}"
 SYSCONFDIR="${SYSCONFDIR:-/etc}"
 
 info "Removing files..."
-rm -f "$LIBDIR/nm-openvpn-sso-service"
-rm -f "$LIBDIR/NetworkManager/VPN/nm-openvpn-sso-service.name"
-rm -f "$PREFIX/share/dbus-1/system.d/org.freedesktop.NetworkManager.openvpn-sso.conf"
+rm -f "$LIBDIR/nm-openvpn3-sso-service"
+rm -f "$LIBDIR/NetworkManager/VPN/nm-openvpn3-sso-service.name"
+rm -f "$PREFIX/share/dbus-1/system.d/org.freedesktop.NetworkManager.openvpn3-sso.conf"
 rm -f "$PREFIX/bin/vpn-sso-connect"
 rm -f "$PREFIX/share/applications/vpn-sso-connect.desktop"
 rm -f "$LIBDIR/qt6/plugins/plasma/network/vpn/plasmanetworkmanagement_openvpnssoui.so"

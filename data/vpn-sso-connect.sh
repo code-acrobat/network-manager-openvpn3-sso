@@ -18,7 +18,7 @@ get_sso_connections() {
         # Check if it's an openvpn-sso connection
         local service_type
         service_type=$(nmcli -t -f vpn.service-type connection show "$conn_name" 2>/dev/null | cut -d: -f2)
-        if [[ "$service_type" == "org.freedesktop.NetworkManager.openvpn-sso" ]]; then
+        if [[ "$service_type" == "org.freedesktop.NetworkManager.openvpn3-sso" ]]; then
             echo "$conn_name"
         fi
     done < <(nmcli -t -f NAME,TYPE connection show | grep ":vpn$" | cut -d: -f1)
@@ -79,7 +79,7 @@ main() {
     if [[ ${#connections[@]} -eq 0 ]]; then
         echo -e "${RED}No SSO VPN connections found.${NC}"
         echo "Import a connection with: nmcli connection import type openvpn file your-config.ovpn"
-        echo "Then configure it: nmcli connection modify \"name\" vpn.service-type org.freedesktop.NetworkManager.openvpn-sso"
+        echo "Then configure it: nmcli connection modify \"name\" vpn.service-type org.freedesktop.NetworkManager.openvpn3-sso"
         exit 1
     fi
     

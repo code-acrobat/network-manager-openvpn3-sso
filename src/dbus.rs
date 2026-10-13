@@ -12,10 +12,11 @@ use zbus::zvariant::OwnedValue;
 use zbus::{interface, Connection};
 
 use crate::config::ConnectionConfig;
-use crate::openvpn::{OpenVpnManager, VpnEvent, VpnState};
+use crate::openvpn3::{OpenVpn3Manager, VpnConfig, VpnEvent, VpnState};
+use std::net::Ipv4Addr;
 
 /// D-Bus service name
-const SERVICE_NAME: &str = "org.freedesktop.NetworkManager.openvpn-sso";
+const SERVICE_NAME: &str = "org.freedesktop.NetworkManager.openvpn3-sso";
 
 /// D-Bus object path
 const OBJECT_PATH: &str = "/org/freedesktop/NetworkManager/VPN/Plugin";
@@ -46,7 +47,7 @@ enum NMVpnPluginFailure {
 
 /// Shared plugin state
 pub struct PluginState {
-    pub vpn_manager: Option<OpenVpnManager>,
+    pub vpn_manager: Option<OpenVpn3Manager>,
     pub current_config: Option<ConnectionConfig>,
     pub state: NMVpnServiceState,
 }
@@ -94,7 +95,7 @@ impl VpnPlugin {
         }
 
         // Create and store VPN manager
-        let vpn_manager = OpenVpnManager::new(config.clone(), tx);
+        let vpn_manager = OpenVpn3Manager::new(config.clone(), tx);
 
         // Update state
         {
@@ -120,7 +121,7 @@ impl VpnPlugin {
                         info!("VPN connection established");
                     }
                     Err(e) => {
-                        error!("VPN connection failed: {}", e);
+                        error!("VPN connection failed: {:#}", e);
                         let mut state = state_clone.write().await;
                         state.state = NMVpnServiceState::Stopped;
                     }
@@ -360,9 +361,6 @@ async fn process_vpn_events(
                     warn!("Failed to emit Failure signal: {}", e);
                 }
             }
-            VpnEvent::Log(msg) => {
-                debug!("OpenVPN: {}", msg);
-            }
         }
     }
 }
@@ -385,7 +383,7 @@ async fn emit_state_changed(connection: &Connection, state: u32) -> Result<()> {
 /// Emit Config signal with tunnel device info
 async fn emit_config(
     connection: &Connection,
-    vpn_config: &crate::openvpn::VpnConfig,
+    vpn_config: &VpnConfig,
 ) -> Result<()> {
     use zbus::zvariant::Value;
 
@@ -426,7 +424,7 @@ async fn emit_config(
 /// Emit Ip4Config signal
 async fn emit_ip4_config(
     connection: &Connection,
-    vpn_config: &crate::openvpn::VpnConfig,
+    vpn_config: &VpnConfig,
 ) -> Result<()> {
     use zbus::zvariant::Value;
 
@@ -439,13 +437,24 @@ async fn emit_ip4_config(
             let ip_u32: u32 = addr.into();
             config.insert("address".to_string(), Value::new(ip_u32));
 
-            // Add prefix length (default /24 for VPN subnet)
-            let prefix: u32 = 24;
+            // Prefix length from the actual netmask (255.255.224.0 → 19);
+            // /24 fallback.
+            let prefix: u32 = vpn_config
+                .netmask
+                .as_deref()
+                .and_then(|m| m.parse::<std::net::Ipv4Addr>().ok())
+                .map(|m| u32::from(m).count_ones())
+                .unwrap_or(24);
             config.insert("prefix".to_string(), Value::new(prefix));
 
-            // For internal VPN gateway, use .1 of the subnet (typical OpenVPN server address)
             let octets = addr.octets();
-            let internal_gw = std::net::Ipv4Addr::new(octets[0], octets[1], octets[2], 1);
+            // Internal VPN gateway: prefer the value parsed from netcfg/ip
+            // (x.x.x.1 convention), fall back to .1 of our subnet.
+            let internal_gw = vpn_config
+                .gateway
+                .as_deref()
+                .and_then(|g| g.parse::<std::net::Ipv4Addr>().ok())
+                .unwrap_or_else(|| Ipv4Addr::new(octets[0], octets[1], octets[2], 1));
             let internal_gw_u32: u32 = internal_gw.into();
             config.insert("int-gw".to_string(), Value::new(internal_gw_u32));
         }
@@ -482,6 +491,12 @@ async fn emit_ip4_config(
     }
 
     info!("Emitting Ip4Config signal: {:?}", config);
+    // never-default: NM's routing/DNS policy otherwise promotes the tun
+    // device to system default (observed: 'policy: set …tun0 as default for
+    // IPv4 routing and DNS' with no DNS servers delivered → external resolv
+    // freeze). We only route the server-pushed subnets, like the openvpn3
+    // CLI does.
+    config.insert("never-default".to_string(), Value::new(true));
     connection
         .emit_signal(
             None::<&str>,

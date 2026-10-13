@@ -97,7 +97,7 @@ QVariantMap OpenVpnSsoSettingWidget::setting() const
     }
 
     NetworkManager::VpnSetting setting;
-    setting.setServiceType(QStringLiteral("org.freedesktop.NetworkManager.openvpn-sso"));
+    setting.setServiceType(QStringLiteral("org.freedesktop.NetworkManager.openvpn3-sso"));
     setting.setData(data);
 
     return setting.toMap();

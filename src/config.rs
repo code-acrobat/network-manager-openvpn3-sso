@@ -53,6 +53,9 @@ pub struct ConnectionConfig {
     pub remote_cert_tls: Option<String>,
     /// Connection type: tls, password, etc. (from vpn.data "connection-type")
     pub connection_type: Option<String>,
+    /// All raw vpn.data key/value pairs (used to synthesize an .ovpn profile
+    /// for the openvpn3 backend when NM fragmented the config on import)
+    pub raw_data: HashMap<String, String>,
 }
 
 impl ConnectionConfig {
@@ -127,91 +130,8 @@ impl ConnectionConfig {
             dev,
             remote_cert_tls,
             connection_type,
+            raw_data: vpn_data,
         })
-    }
-
-    /// Build OpenVPN command line arguments
-    pub fn build_openvpn_args(&self, management_socket: &str) -> Vec<String> {
-        let mut args = Vec::new();
-
-        if let Some(ref config_path) = self.config_path {
-            // .ovpn file mode: use --config
-            args.extend([
-                "--config".to_string(),
-                config_path.to_string_lossy().to_string(),
-            ]);
-        } else {
-            // NM-imported mode: build from individual settings
-            args.extend([
-                "--client".to_string(),
-                "--nobind".to_string(),
-                "--dev".to_string(),
-                self.dev.clone().unwrap_or_else(|| "tun".to_string()),
-                "--persist-key".to_string(),
-                "--persist-tun".to_string(),
-                "--resolv-retry".to_string(),
-                "infinite".to_string(),
-            ]);
-
-            if let Some(ref ca) = self.ca {
-                args.extend(["--ca".to_string(), ca.clone()]);
-            }
-            if let Some(ref cert) = self.cert {
-                args.extend(["--cert".to_string(), cert.clone()]);
-            }
-            if let Some(ref key) = self.key {
-                args.extend(["--key".to_string(), key.clone()]);
-            }
-            if let Some(ref ta) = self.ta {
-                args.push("--tls-auth".to_string());
-                args.push(ta.clone());
-                if let Some(ref dir) = self.ta_dir {
-                    args.push(dir.clone());
-                }
-            }
-            if let Some(ref cipher) = self.cipher {
-                args.extend(["--cipher".to_string(), cipher.clone()]);
-            }
-            if let Some(ref auth) = self.auth {
-                args.extend(["--auth".to_string(), auth.clone()]);
-            }
-            if let Some(ref remote_cert_tls) = self.remote_cert_tls {
-                args.extend(["--remote-cert-tls".to_string(), remote_cert_tls.clone()]);
-            }
-        }
-
-        // Common: management interface
-        args.extend([
-            "--management".to_string(),
-            management_socket.to_string(),
-            "unix".to_string(),
-            "--management-query-passwords".to_string(),
-            "--management-hold".to_string(),
-            "--script-security".to_string(),
-            "2".to_string(),
-        ]);
-
-        // Common: apply overrides
-        if let Some(ref remote) = self.remote {
-            // NM stores remote as "host:port" — split for OpenVPN's --remote host [port]
-            if let Some((host, port)) = remote.rsplit_once(':') {
-                args.extend(["--remote".to_string(), host.to_string(), port.to_string()]);
-            } else {
-                args.extend(["--remote".to_string(), remote.clone()]);
-            }
-        }
-
-        if let Some(port) = self.port {
-            args.extend(["--port".to_string(), port.to_string()]);
-        }
-
-        if let Some(ref proto) = self.protocol {
-            args.extend(["--proto".to_string(), proto.clone()]);
-        }
-
-        args.extend(self.extra_args.clone());
-
-        args
     }
 }
 
@@ -419,108 +339,5 @@ mod tests {
             Some("/etc/openvpn/client/client.crt".to_string())
         );
         assert_eq!(config.dev, Some("tun".to_string()));
-    }
-
-    #[test]
-    fn build_openvpn_args_config_file_mode() {
-        let config = ConnectionConfig {
-            uuid: "uuid".to_string(),
-            id: "id".to_string(),
-            config_path: Some(PathBuf::from("/etc/openvpn/client/test.ovpn")),
-            remote: None,
-            port: None,
-            protocol: None,
-            username: None,
-            password: None,
-            extra_args: Vec::new(),
-            ca: None,
-            cert: None,
-            key: None,
-            ta: None,
-            ta_dir: None,
-            cipher: None,
-            auth: None,
-            dev: None,
-            remote_cert_tls: None,
-            connection_type: None,
-        };
-
-        let args = config.build_openvpn_args("/run/user/1000/openvpn-sso.sock");
-
-        assert_eq!(args[0], "--config");
-        assert_eq!(args[1], "/etc/openvpn/client/test.ovpn");
-        assert!(!args.iter().any(|a| a == "--client"));
-
-        let mgmt_idx = args
-            .iter()
-            .position(|a| a == "--management")
-            .expect("--management flag should be present");
-        assert_eq!(args[mgmt_idx + 1], "/run/user/1000/openvpn-sso.sock");
-        assert_eq!(args[mgmt_idx + 2], "unix");
-        assert!(args.iter().any(|a| a == "--management-query-passwords"));
-        assert!(args.iter().any(|a| a == "--management-hold"));
-        assert!(args.iter().any(|a| a == "--script-security"));
-    }
-
-    #[test]
-    fn build_openvpn_args_nm_imported_mode() {
-        let config = ConnectionConfig {
-            uuid: "uuid".to_string(),
-            id: "id".to_string(),
-            config_path: None,
-            remote: Some("vpn.example.com:1194".to_string()),
-            port: None,
-            protocol: Some("udp".to_string()),
-            username: None,
-            password: None,
-            extra_args: vec!["--verb".to_string(), "3".to_string()],
-            ca: Some("/etc/openvpn/client/ca.crt".to_string()),
-            cert: Some("/etc/openvpn/client/client.crt".to_string()),
-            key: Some("/etc/openvpn/client/client.key".to_string()),
-            ta: Some("/etc/openvpn/client/ta.key".to_string()),
-            ta_dir: Some("1".to_string()),
-            cipher: Some("AES-256-GCM".to_string()),
-            auth: Some("SHA256".to_string()),
-            dev: Some("tun".to_string()),
-            remote_cert_tls: Some("server".to_string()),
-            connection_type: Some("tls".to_string()),
-        };
-
-        let args = config.build_openvpn_args("/run/user/1000/openvpn-sso.sock");
-
-        assert!(args.iter().any(|a| a == "--client"));
-        assert!(!args.iter().any(|a| a == "--config"));
-
-        assert!(args
-            .windows(2)
-            .any(|w| w[0] == "--ca" && w[1] == "/etc/openvpn/client/ca.crt"));
-        assert!(args
-            .windows(2)
-            .any(|w| w[0] == "--cert" && w[1] == "/etc/openvpn/client/client.crt"));
-        assert!(args
-            .windows(2)
-            .any(|w| w[0] == "--key" && w[1] == "/etc/openvpn/client/client.key"));
-        assert!(args
-            .windows(3)
-            .any(|w| w[0] == "--tls-auth" && w[1] == "/etc/openvpn/client/ta.key" && w[2] == "1"));
-
-        let mgmt_idx = args
-            .iter()
-            .position(|a| a == "--management")
-            .expect("--management flag should be present");
-        assert_eq!(args[mgmt_idx + 1], "/run/user/1000/openvpn-sso.sock");
-        assert_eq!(args[mgmt_idx + 2], "unix");
-        assert!(args.iter().any(|a| a == "--management-query-passwords"));
-        assert!(args.iter().any(|a| a == "--management-hold"));
-
-        // "host:port" remote is split into --remote host port
-        assert!(args
-            .windows(3)
-            .any(|w| w[0] == "--remote" && w[1] == "vpn.example.com" && w[2] == "1194"));
-        assert!(args.windows(2).any(|w| w[0] == "--proto" && w[1] == "udp"));
-
-        // extra_args are appended at the end
-        assert_eq!(args[args.len() - 2], "--verb");
-        assert_eq!(args[args.len() - 1], "3");
     }
 }
