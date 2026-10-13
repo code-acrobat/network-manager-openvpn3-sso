@@ -33,7 +33,7 @@ install.sh / uninstall.sh / PKGBUILD
 
 ## Conventions
 
-- Commit identity: run `~/bin/tnggitauthor` before committing; no personal endpoints anywhere.
+- Commit identity: use a neutral author (no agent identifiers, no personal endpoints) — set `git config user.name`/`user.email` appropriately before committing.
 - Test cycle: bump `version` in `Cargo.toml` before each `cargo deb` (apt skips same versions), and always pkill the stale plugin daemon after installing — NM (KillMode=process) lets it linger, and it keeps the D-Bus name.
 - NM may call `connect` twice; browser open is deduped (5 s window in `open_in_browser`).
 - openvpn3 D-Bus API source: Codeberg OpenVPN/openvpn3-linux; live introspection: `busctl --system tree net.openvpn.v3.sessions`, `openvpn3 sessions-list`.
