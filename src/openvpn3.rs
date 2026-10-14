@@ -428,35 +428,106 @@ fn open_in_browser(url: &str) {
     {
         return; // deduped (5 s window)
     }
-    // xdg-open from this root-spawned plugin has no WAYLAND_DISPLAY/DISPLAY
-    // inside its environment — observed live: xdg-open goes straight
-    // defunct, no browser, no error anywhere. Borrow the graphical
-    // session's env and re-run xdg-open as the desktop user.
-    // # ponytail: GNOME/KDE/xfce anchor processes, first match wins;
-    // a real multi-seat picker is out of scope for a desktop plugin.
-    if let Some(session) = find_graphical_session() {
-        let mut cmd = std::process::Command::new("/usr/sbin/runuser");
-        cmd.args(["-u", &session.0, "--", "xdg-open", url]);
-        for (k, v) in &session.1 {
-            cmd.env(k, v);
+    let url = url.to_string();
+    // Fire-and-forget: the launch chain can block briefly (busctl method
+    // call, xdg-open exit), which the async caller must not.
+    std::thread::spawn(move || launch_browser(&url));
+}
+
+/// Best-effort browser launch chain, run on a helper thread:
+/// 1. xdg-desktop-portal OpenURI as the desktop user — the portal runs
+///    inside the user session, so the browser is spawned with the
+///    session's own environment (immune to whatever env the NM-spawned
+///    plugin carries).
+/// 2. runuser xdg-open with the filesystem-discovered session env.
+/// 3. bare xdg-open (headless/last resort).
+///
+/// Every step's stderr and exit status is logged — a silent failure is
+/// undiagnosable from the journal otherwise.
+fn launch_browser(url: &str) {
+    if let Some((user, env)) = find_graphical_session() {
+        if try_portal(&user, &env, url) {
+            return;
         }
-        if cmd
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .is_ok()
-        {
-            info!("SSO browser opened (user {})", session.0);
+        if try_runuser_xdg_open(&user, &env, url) {
             return;
         }
     }
-    // Last resort / headless fallback.
     warn!("SSO browser open fell back to bare xdg-open");
     let _ = std::process::Command::new("xdg-open")
         .arg(url)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn();
+}
+
+/// xdg-desktop-portal OpenURI over the user's session bus (invoked as the
+/// desktop user; the root plugin cannot reach the session bus itself).
+fn try_portal(user: &str, env: &[(String, String)], url: &str) -> bool {
+    let mut cmd = std::process::Command::new("/usr/sbin/runuser");
+    cmd.args([
+        "-u",
+        user,
+        "--",
+        "busctl",
+        "--user",
+        "call",
+        "org.freedesktop.portal.Desktop",
+        "/org/freedesktop/portal/desktop",
+        "org.freedesktop.portal.OpenURI",
+        "OpenURI",
+        "ssa{sv}",
+        "",
+        url,
+        "0",
+    ]);
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    match cmd.output() {
+        Ok(out) if out.status.success() => {
+            info!("SSO browser opened via xdg-desktop-portal (user {user})");
+            true
+        }
+        Ok(out) => {
+            warn!(
+                "xdg-desktop-portal OpenURI failed ({}): {}",
+                out.status,
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+            false
+        }
+        Err(e) => {
+            warn!("cannot run portal launch: {e}");
+            false
+        }
+    }
+}
+
+fn try_runuser_xdg_open(user: &str, env: &[(String, String)], url: &str) -> bool {
+    let mut cmd = std::process::Command::new("/usr/sbin/runuser");
+    cmd.args(["-u", user, "--", "xdg-open", url]);
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    match cmd.output() {
+        Ok(out) if out.status.success() => {
+            info!("SSO browser opened via xdg-open (user {user})");
+            true
+        }
+        Ok(out) => {
+            warn!(
+                "xdg-open as {user} failed ({}): {}",
+                out.status,
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+            false
+        }
+        Err(e) => {
+            warn!("cannot run xdg-open: {e}");
+            false
+        }
+    }
 }
 
 /// Graphical-session env pieces the plugin can discover without
