@@ -1,37 +1,35 @@
-# NetworkManager OpenVPN SSO Plugin
+# NetworkManager OpenVPN 3 SSO Plugin
 
-> A NetworkManager VPN plugin that adds OAuth 2.0 / OIDC Single Sign-On (SSO) support for OpenVPN connections.
+> A NetworkManager VPN plugin that drives the OpenVPN 3 Linux client with browser-based Single Sign-On (SSO).
 
-NetworkManager OpenVPN SSO enables browser-based SSO authentication for OpenVPN connections on Linux desktops. It integrates directly with NetworkManager so VPN connections can be managed through standard network applets (GNOME, KDE Plasma) or the command line. When a connection is initiated, the plugin discovers the OAuth/OIDC endpoint from the OpenVPN server, opens the user's browser for authentication, and completes the VPN tunnel automatically once login succeeds.
+This plugin activates VPN connections through the OpenVPN 3 Linux D-Bus services (configuration manager, session manager, netcfg) instead of spawning an `openvpn` 2.x process. When the server demands web authentication, the plugin opens the user's browser (via `xdg-desktop-portal`, falling back to `xdg-open` as the desktop user); after the login — including any second factor at the identity provider — the OpenVPN 3 backend completes the handshake by itself.
 
 ## Links
 
-- [Documentation](https://quinnjr.github.io/network-manager-openvpn-sso/)
-- [GitHub Repository](https://github.com/quinnjr/network-manager-openvpn-sso)
+- [Documentation](https://code-acrobat.github.io/network-manager-openvpn3-sso/)
+- [GitHub Repository](https://github.com/code-acrobat/network-manager-openvpn3-sso)
 
 ## Key Features
 
-- Browser-based SSO authentication via OAuth 2.0 / OIDC
-- Automatic OAuth discovery from the OpenVPN server
-- Session token caching for connection maintenance
-- Desktop notifications for connection status
-- Full NetworkManager integration (GNOME and KDE Plasma network applets)
-- Native KDE Plasma plasma-nm UI plugin
+- OpenVPN 3 Linux backend (no openvpn 2.x process; requires openvpn3-linux ≥ 20)
+- Browser-based SSO authentication with second-factor support
+- Profile synthesis: works with intact `.ovpn` files and with the fragment form `nmcli connection import` produces
+- NetworkManager-aware IP config: relays tunnel address/prefix/gateway and marks the tunnel `never-default` so NM does not hijack the default route or DNS
+- Native KDE Plasma plasma-nm UI plugin (from the upstream project)
 - Packages for Arch Linux, Debian/Ubuntu, Fedora/RHEL, and generic Linux tarballs
 
 ## Installation
 
 ```bash
 # Arch Linux
-sudo pacman -U networkmanager-openvpn-sso-*.pkg.tar.zst
+sudo pacman -U networkmanager-openvpn3-sso-*-x86_64.pkg.tar.zst
 
 # Debian / Ubuntu
-sudo dpkg -i networkmanager-openvpn-sso_*_amd64.deb
-sudo apt-get install -f
+sudo apt install ./networkmanager-openvpn3-sso_*_amd64.deb
 
 # From source
-git clone https://github.com/quinnjr/network-manager-openvpn-sso.git
-cd network-manager-openvpn-sso
+git clone https://github.com/code-acrobat/network-manager-openvpn3-sso.git
+cd network-manager-openvpn3-sso
 cargo build --release
 sudo ./install.sh
 ```
@@ -43,8 +41,14 @@ sudo ./install.sh
 nmcli connection import type openvpn file your-vpn-config.ovpn
 
 # Switch the connection to use the SSO plugin
-nmcli connection modify "your-vpn-name" vpn.service-type org.freedesktop.NetworkManager.openvpn-sso
+nmcli connection modify "your-vpn-name" vpn.service-type org.freedesktop.NetworkManager.openvpn3-sso
 
 # Connect (browser opens for SSO authentication)
 nmcli connection up "your-vpn-name"
 ```
+
+## Notes
+
+- openvpn3's netcfg owns the tun device, routes and DNS; the plugin only reports the resulting configuration to NetworkManager.
+- Logs: `journalctl -t nm-openvpn3-sso-service -f`
+- Hard fork of `quinnjr/network-manager-openvpn-sso` with thanks to Joseph R. Quinn for the original plugin and the Plasma UI. MIT License.

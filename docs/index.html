@@ -15,33 +15,33 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
     <!-- Primary Meta Tags -->
-    <title>NetworkManager OpenVPN SSO Plugin - OAuth 2.0 Single Sign-On for Linux VPN</title>
-    <meta name="title" content="NetworkManager OpenVPN SSO Plugin - OAuth 2.0 Single Sign-On for Linux VPN">
-    <meta name="description" content="A NetworkManager VPN plugin that adds OAuth 2.0 / OIDC Single Sign-On (SSO) support for OpenVPN connections on Linux. Browser-based authentication, automatic OAuth discovery, and seamless NetworkManager integration.">
-    <meta name="keywords" content="NetworkManager, OpenVPN, SSO, OAuth, OIDC, Single Sign-On, Linux VPN, VPN plugin, authentication, Rust, open source">
-    <meta name="author" content="Joseph R. Quinn">
+    <title>NetworkManager OpenVPN 3 SSO Plugin - Browser-based Single Sign-On for Linux VPN</title>
+    <meta name="title" content="NetworkManager OpenVPN 3 SSO Plugin - Browser-based Single Sign-On for Linux VPN">
+    <meta name="description" content="A NetworkManager VPN plugin that drives the OpenVPN 3 Linux client with browser-based SSO authentication. The server's web login opens in your browser; the VPN connects itself once you are authenticated.">
+    <meta name="keywords" content="NetworkManager, OpenVPN, OpenVPN 3, SSO, Single Sign-On, Linux VPN, VPN plugin, authentication, Rust, open source">
+    <meta name="author" content="code-acrobat">
     <meta name="robots" content="index, follow">
     <meta name="language" content="English">
     <meta name="revisit-after" content="7 days">
     
     <!-- Canonical URL -->
-    <link rel="canonical" href="https://quinnjr.github.io/network-manager-openvpn-sso/">
+    <link rel="canonical" href="https://code-acrobat.github.io/network-manager-openvpn3-sso/">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://quinnjr.github.io/network-manager-openvpn-sso/">
-    <meta property="og:title" content="NetworkManager OpenVPN SSO Plugin - OAuth 2.0 Single Sign-On for Linux VPN">
-    <meta property="og:description" content="A NetworkManager VPN plugin that adds OAuth 2.0 / OIDC Single Sign-On (SSO) support for OpenVPN connections on Linux.">
-    <meta property="og:image" content="https://quinnjr.github.io/network-manager-openvpn-sso/og-image.png">
-    <meta property="og:site_name" content="NetworkManager OpenVPN SSO">
+    <meta property="og:url" content="https://code-acrobat.github.io/network-manager-openvpn3-sso/">
+    <meta property="og:title" content="NetworkManager OpenVPN 3 SSO Plugin - Browser-based Single Sign-On for Linux VPN">
+    <meta property="og:description" content="A NetworkManager VPN plugin that drives the OpenVPN 3 Linux client with browser-based SSO authentication for OpenVPN connections on Linux.">
+    <meta property="og:image" content="https://code-acrobat.github.io/network-manager-openvpn3-sso/og-image.png">
+    <meta property="og:site_name" content="NetworkManager OpenVPN 3 SSO">
     <meta property="og:locale" content="en_US">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://quinnjr.github.io/network-manager-openvpn-sso/">
-    <meta name="twitter:title" content="NetworkManager OpenVPN SSO Plugin - OAuth 2.0 Single Sign-On for Linux VPN">
-    <meta name="twitter:description" content="A NetworkManager VPN plugin that adds OAuth 2.0 / OIDC Single Sign-On (SSO) support for OpenVPN connections on Linux.">
-    <meta name="twitter:image" content="https://quinnjr.github.io/network-manager-openvpn-sso/og-image.png">
+    <meta name="twitter:url" content="https://code-acrobat.github.io/network-manager-openvpn3-sso/">
+    <meta name="twitter:title" content="NetworkManager OpenVPN 3 SSO Plugin - Browser-based Single Sign-On for Linux VPN">
+    <meta name="twitter:description" content="A NetworkManager VPN plugin that drives the OpenVPN 3 Linux client with browser-based SSO authentication for OpenVPN connections on Linux.">
+    <meta name="twitter:image" content="https://code-acrobat.github.io/network-manager-openvpn3-sso/og-image.png">
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
@@ -70,17 +70,17 @@
     {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": "NetworkManager OpenVPN SSO Plugin",
+        "name": "NetworkManager OpenVPN 3 SSO Plugin",
         "applicationCategory": "NetworkApplication",
         "operatingSystem": "Linux",
-        "description": "A NetworkManager VPN plugin that adds OAuth 2.0 / OIDC Single Sign-On (SSO) support for OpenVPN connections on Linux.",
-        "url": "https://quinnjr.github.io/network-manager-openvpn-sso/",
-        "downloadUrl": "https://github.com/quinnjr/network-manager-openvpn-sso/releases",
-        "softwareVersion": "0.1.0",
+        "description": "A NetworkManager VPN plugin that drives the OpenVPN 3 Linux client with browser-based SSO authentication for OpenVPN connections on Linux.",
+        "url": "https://code-acrobat.github.io/network-manager-openvpn3-sso/",
+        "downloadUrl": "https://github.com/code-acrobat/network-manager-openvpn3-sso/releases",
+        "softwareVersion": "0.4.19",
         "author": {
             "@type": "Organization",
-            "name": "Joseph R. Quinn",
-            "url": "https://github.com/quinnjr"
+            "name": "code-acrobat",
+            "url": "https://github.com/code-acrobat"
         },
         "license": "https://opensource.org/licenses/MIT",
         "programmingLanguage": "Rust",
@@ -90,11 +90,11 @@
             "priceCurrency": "USD"
         },
         "featureList": [
-            "OAuth 2.0 / OIDC Single Sign-On authentication",
-            "Browser-based SSO login",
-            "Automatic OAuth configuration discovery",
-            "Session token caching",
-            "Desktop notifications",
+            "Browser-based SSO authentication",
+            "OpenVPN 3 Linux backend (D-Bus)",
+            "Second-factor support at the identity provider",
+            "Never-default tunnel routing",
+            "Profile synthesis from NM fragments",
             "Full NetworkManager integration"
         ]
     }
@@ -108,42 +108,42 @@
         "mainEntity": [
             {
                 "@type": "Question",
-                "name": "What is NetworkManager OpenVPN SSO?",
+                "name": "What is NetworkManager OpenVPN 3 SSO?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "NetworkManager OpenVPN SSO is a Linux VPN plugin that adds OAuth 2.0 and OIDC Single Sign-On support to OpenVPN connections. It allows users to authenticate using their browser with corporate SSO providers like Google, Microsoft, Okta, and others."
+                    "text": "NetworkManager OpenVPN 3 SSO is a Linux VPN plugin that drives the OpenVPN 3 Linux client and supports server-driven browser-based SSO. When the server demands web authentication, the plugin opens your browser; after the login completes, the VPN connects itself."
                 }
             },
             {
                 "@type": "Question",
-                "name": "How do I install NetworkManager OpenVPN SSO on Arch Linux?",
+                "name": "How do I install NetworkManager OpenVPN 3 SSO on Arch Linux?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "On Arch Linux, download the .pkg.tar.zst package from the GitHub releases page and install it using: sudo pacman -U networkmanager-openvpn-sso-*.pkg.tar.zst"
+                    "text": "On Arch Linux, download the .pkg.tar.zst package from the GitHub releases page and install it using: sudo pacman -U **.pkg.tar.zst"
                 }
             },
             {
                 "@type": "Question",
-                "name": "How do I install NetworkManager OpenVPN SSO on Ubuntu or Debian?",
+                "name": "How do I install NetworkManager OpenVPN 3 SSO on Ubuntu or Debian?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "On Ubuntu or Debian, download the .deb package from the GitHub releases page and install it using: sudo dpkg -i networkmanager-openvpn-sso_*_amd64.deb && sudo apt-get install -f"
+                    "text": "On Ubuntu or Debian, download the .deb package from the GitHub releases page and install it using: sudo dpkg -i networkmanager-openvpn3-sso_*_amd64.deb && sudo apt-get install -f"
                 }
             },
             {
                 "@type": "Question",
-                "name": "Does NetworkManager OpenVPN SSO work with Google SSO?",
+                "name": "Does NetworkManager OpenVPN 3 SSO work with Google SSO?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes, NetworkManager OpenVPN SSO works with any OAuth 2.0 or OIDC provider including Google, Microsoft Azure AD, Okta, Auth0, and others. The plugin automatically discovers the authentication URL from your OpenVPN server."
+                    "text": "Yes. The plugin relays whatever web-authentication URL your OpenVPN server presents, so any provider the server uses works — Google, Microsoft Azure AD, Okta, Auth0, Keycloak and others."
                 }
             },
             {
                 "@type": "Question",
-                "name": "Is NetworkManager OpenVPN SSO free and open source?",
+                "name": "Is NetworkManager OpenVPN 3 SSO free and open source?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes, NetworkManager OpenVPN SSO is completely free and open source under the MIT license. The source code is available on GitHub."
+                    "text": "Yes, NetworkManager OpenVPN 3 SSO is completely free and open source under the MIT license. The source code is available on GitHub."
                 }
             }
         ]
@@ -161,7 +161,7 @@
             {
                 "@type": "HowToStep",
                 "name": "Install the plugin",
-                "text": "Download and install the NetworkManager OpenVPN SSO plugin for your Linux distribution from the GitHub releases page."
+                "text": "Download and install the NetworkManager OpenVPN 3 SSO plugin for your Linux distribution from the GitHub releases page."
             },
             {
                 "@type": "HowToStep",
@@ -171,7 +171,7 @@
             {
                 "@type": "HowToStep",
                 "name": "Configure the connection",
-                "text": "Update the connection to use the SSO plugin: nmcli connection modify 'your-vpn-name' vpn.service-type org.freedesktop.NetworkManager.openvpn-sso"
+                "text": "Update the connection to use the SSO plugin: nmcli connection modify 'your-vpn-name' vpn.service-type org.freedesktop.NetworkManager.openvpn3-sso"
             },
             {
                 "@type": "HowToStep",
@@ -215,7 +215,7 @@
                     <a href="#features" class="hover:text-primary transition-colors">Features</a>
                     <a href="#installation" class="hover:text-primary transition-colors">Install</a>
                     <a href="#faq" class="hover:text-primary transition-colors">FAQ</a>
-                    <a href="https://github.com/quinnjr/network-manager-openvpn-sso" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition-colors" target="_blank" rel="noopener">
+                    <a href="https://github.com/code-acrobat/network-manager-openvpn3-sso" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition-colors" target="_blank" rel="noopener">
                         <i class="fa-brands fa-github mr-2"></i>GitHub
                     </a>
                 </div>
@@ -228,17 +228,17 @@
         <div class="max-w-4xl mx-auto text-center">
             <div class="inline-flex items-center glass px-4 py-2 rounded-full text-sm mb-8">
                 <i class="fa-solid fa-rocket text-accent mr-2"></i>
-                <span>Version 0.1.0 Now Available</span>
+                <span>Version 0.4.19 Now Available</span>
             </div>
             <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
                 OpenVPN with <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Single Sign-On</span> for Linux
             </h1>
             <p class="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-                A NetworkManager plugin that brings OAuth 2.0 / OIDC authentication to your OpenVPN connections. 
-                Connect to your corporate VPN using Google, Microsoft, Okta, or any SSO provider.
+                A NetworkManager plugin that drives the OpenVPN 3 Linux client and opens your browser
+                for the server's SSO login. Complete the authentication — second factor included — and the VPN connects itself.
             </p>
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="https://github.com/quinnjr/network-manager-openvpn-sso/releases" class="bg-primary hover:bg-primary/80 px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 flex items-center">
+                <a href="https://github.com/code-acrobat/network-manager-openvpn3-sso/releases" class="bg-primary hover:bg-primary/80 px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 flex items-center">
                     <i class="fa-solid fa-download mr-3"></i>
                     Download Latest Release
                 </a>
@@ -267,18 +267,18 @@
                     </div>
                     <h3 class="text-xl font-semibold mb-2">Browser-Based SSO</h3>
                     <p class="text-gray-400">
-                        Authenticate using your default browser with any OAuth 2.0 or OIDC provider including Google, Microsoft, and Okta.
+                        The server's web-authentication URL opens in your default browser; log in with your identity provider — any second factor included — and the tunnel comes up by itself.
                     </p>
                 </article>
                 
                 <!-- Feature 2 -->
                 <article class="feature-card glass rounded-2xl p-6 transition-all duration-300">
                     <div class="w-14 h-14 bg-secondary/20 rounded-xl flex items-center justify-center mb-4">
-                        <i class="fa-solid fa-wand-magic-sparkles text-secondary text-2xl"></i>
+                        <i class="fa-solid fa-gears text-secondary text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-semibold mb-2">Automatic Discovery</h3>
+                    <h3 class="text-xl font-semibold mb-2">OpenVPN 3 Backend</h3>
                     <p class="text-gray-400">
-                        The plugin automatically discovers OAuth configuration from your OpenVPN server. No manual setup required.
+                        Sessions run through the OpenVPN 3 Linux D-Bus services — no openvpn 2.x process is spawned.
                     </p>
                 </article>
                 
@@ -296,22 +296,22 @@
                 <!-- Feature 4 -->
                 <article class="feature-card glass rounded-2xl p-6 transition-all duration-300">
                     <div class="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center mb-4">
-                        <i class="fa-solid fa-bell text-green-500 text-2xl"></i>
+                        <i class="fa-solid fa-route text-green-500 text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-semibold mb-2">Desktop Notifications</h3>
+                    <h3 class="text-xl font-semibold mb-2">Never-Default Routing</h3>
                     <p class="text-gray-400">
-                        Receive real-time notifications about connection status, authentication requests, and errors.
+                        The tunnel is marked never-default: your system's default route and DNS stay with your underlying network.
                     </p>
                 </article>
                 
                 <!-- Feature 5 -->
                 <article class="feature-card glass rounded-2xl p-6 transition-all duration-300">
                     <div class="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center mb-4">
-                        <i class="fa-solid fa-key text-orange-500 text-2xl"></i>
+                        <i class="fa-solid fa-puzzle-piece text-orange-500 text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-semibold mb-2">Session Token Caching</h3>
+                    <h3 class="text-xl font-semibold mb-2">Profile Synthesis</h3>
                     <p class="text-gray-400">
-                        Securely caches session tokens for connection maintenance with restricted file permissions.
+                        Works with intact .ovpn profiles and with the fragment form nmcli connection import produces — the plugin reassembles the profile for OpenVPN 3.
                     </p>
                 </article>
                 
@@ -347,7 +347,7 @@
                         <h3 class="text-xl font-semibold">Arch Linux</h3>
                     </div>
                     <div class="code-block p-4">
-                        <code class="text-green-400">sudo pacman -U networkmanager-openvpn-sso-*.pkg.tar.zst</code>
+                        <code class="text-green-400">sudo pacman -U **.pkg.tar.zst</code>
                     </div>
                 </div>
                 
@@ -358,7 +358,7 @@
                         <h3 class="text-xl font-semibold">Debian / Ubuntu</h3>
                     </div>
                     <div class="code-block p-4 space-y-2">
-                        <code class="text-green-400 block">sudo dpkg -i networkmanager-openvpn-sso_*_amd64.deb</code>
+                        <code class="text-green-400 block">sudo dpkg -i networkmanager-openvpn3-sso_*_amd64.deb</code>
                         <code class="text-green-400 block">sudo apt-get install -f</code>
                     </div>
                 </div>
@@ -370,13 +370,13 @@
                         <h3 class="text-xl font-semibold">Fedora / RHEL / CentOS</h3>
                     </div>
                     <div class="code-block p-4">
-                        <code class="text-green-400">sudo dnf install networkmanager-openvpn-sso-*.x86_64.rpm</code>
+                        <code class="text-green-400">sudo dnf install **.x86_64.rpm</code>
                     </div>
                 </div>
             </div>
             
             <div class="mt-8 text-center">
-                <a href="https://github.com/quinnjr/network-manager-openvpn-sso/releases" class="inline-flex items-center text-primary hover:text-primary/80 transition-colors">
+                <a href="https://github.com/code-acrobat/network-manager-openvpn3-sso/releases" class="inline-flex items-center text-primary hover:text-primary/80 transition-colors">
                     <i class="fa-solid fa-arrow-right mr-2"></i>
                     View all releases and download options
                 </a>
@@ -410,7 +410,7 @@
                     <div class="flex-1">
                         <h3 class="text-xl font-semibold mb-2">Configure for SSO authentication</h3>
                         <div class="code-block p-4">
-                            <code class="text-green-400">nmcli connection modify "your-vpn-name" vpn.service-type org.freedesktop.NetworkManager.openvpn-sso</code>
+                            <code class="text-green-400">nmcli connection modify "your-vpn-name" vpn.service-type org.freedesktop.NetworkManager.openvpn3-sso</code>
                         </div>
                     </div>
                 </div>
@@ -435,7 +435,7 @@
             <div class="text-center mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
                 <p class="text-gray-400 text-lg">
-                    Common questions about NetworkManager OpenVPN SSO.
+                    Common questions about NetworkManager OpenVPN 3 SSO.
                 </p>
             </div>
             
@@ -446,7 +446,7 @@
                         <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform"></i>
                     </summary>
                     <div class="px-6 pb-6 text-gray-400">
-                        NetworkManager OpenVPN SSO works with any OAuth 2.0 or OIDC provider including Google Workspace, Microsoft Azure AD, Okta, Auth0, Keycloak, and any other standard-compliant identity provider. The plugin automatically discovers the authentication URL from your OpenVPN server.
+                        Any provider your OpenVPN server presents through its web-authentication flow — Google Workspace, Microsoft Azure AD, Okta, Auth0, Keycloak and others all work. The plugin relays the server-sent authentication URL to your browser; it makes no assumptions about the identity provider.
                     </div>
                 </details>
                 
@@ -476,7 +476,7 @@
                         <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform"></i>
                     </summary>
                     <div class="px-6 pb-6 text-gray-400">
-                        Absolutely. The plugin is written in Rust for memory safety, stores session tokens with restrictive file permissions (accessible only by root), and relies on your browser for secure SSO authentication. All credentials are handled by your identity provider—no passwords are stored locally.
+                        Absolutely. The plugin is written in Rust for memory safety, keeps no credentials, and relies on your browser for secure SSO authentication. Synthesized profiles (which contain the client's private key) are written with 0600 permissions, root-only. All login credentials are handled by your identity provider—no passwords are stored locally.
                     </div>
                 </details>
                 
@@ -486,7 +486,7 @@
                         <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform"></i>
                     </summary>
                     <div class="px-6 pb-6 text-gray-400">
-                        The session tokens provided by OpenVPN servers are typically session-specific and expire when you disconnect. This is a security feature that ensures each connection is properly authenticated. If your browser has an active SSO session, the authentication will be automatic (no password re-entry needed).
+                        Whether you re-authenticate is up to the server: the OpenVPN server decides when its web authentication is required again. If your browser still has an active SSO session with the identity provider, the re-authentication is usually a single click or fully automatic.
                     </div>
                 </details>
                 
@@ -509,14 +509,14 @@
             <div class="glass rounded-3xl p-12">
                 <h2 class="text-3xl sm:text-4xl font-bold mb-4">Ready to Get Started?</h2>
                 <p class="text-gray-400 text-lg mb-8 max-w-2xl mx-auto">
-                    Download NetworkManager OpenVPN SSO and connect to your corporate VPN with ease.
+                    Download NetworkManager OpenVPN 3 SSO and connect to your corporate VPN with ease.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <a href="https://github.com/quinnjr/network-manager-openvpn-sso/releases" class="bg-primary hover:bg-primary/80 px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 flex items-center">
+                    <a href="https://github.com/code-acrobat/network-manager-openvpn3-sso/releases" class="bg-primary hover:bg-primary/80 px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 flex items-center">
                         <i class="fa-solid fa-download mr-3"></i>
                         Download Now
                     </a>
-                    <a href="https://github.com/quinnjr/network-manager-openvpn-sso" class="glass hover:bg-white/10 px-8 py-4 rounded-xl font-semibold text-lg transition-all flex items-center" target="_blank" rel="noopener">
+                    <a href="https://github.com/code-acrobat/network-manager-openvpn3-sso" class="glass hover:bg-white/10 px-8 py-4 rounded-xl font-semibold text-lg transition-all flex items-center" target="_blank" rel="noopener">
                         <i class="fa-brands fa-github mr-3"></i>
                         Star on GitHub
                     </a>
@@ -531,19 +531,16 @@
             <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div class="flex items-center space-x-3">
                     <span class="text-2xl">🔐</span>
-                    <span class="font-semibold">NetworkManager OpenVPN SSO</span>
+                    <span class="font-semibold">NetworkManager OpenVPN 3 SSO</span>
                 </div>
                 <div class="flex items-center space-x-6 text-gray-400">
-                    <a href="https://github.com/quinnjr/network-manager-openvpn-sso" class="hover:text-white transition-colors" target="_blank" rel="noopener" aria-label="GitHub">
+                    <a href="https://github.com/code-acrobat/network-manager-openvpn3-sso" class="hover:text-white transition-colors" target="_blank" rel="noopener" aria-label="GitHub">
                         <i class="fa-brands fa-github text-xl"></i>
                     </a>
                 </div>
             </div>
             <div class="mt-8 pt-8 border-t border-white/10 text-center text-gray-500 text-sm">
-                <p>MIT License &copy; 2026 <a href="https://github.com/quinnjr" class="hover:text-white transition-colors">Joseph R. Quinn</a></p>
-                <p class="mt-2">
-                    <a href="mailto:quinn.josephr@protonmail.com" class="hover:text-white transition-colors">quinn.josephr@protonmail.com</a>
-                </p>
+                <p>MIT License &copy; 2026 Joseph R. Quinn — hard fork maintained by <a href="https://github.com/code-acrobat" class="hover:text-white transition-colors">code-acrobat</a>, with thanks to <a href="https://github.com/quinnjr" class="hover:text-white transition-colors">Joseph R. Quinn</a> for the original plugin and the Plasma UI.</p>
             </div>
         </div>
     </footer>

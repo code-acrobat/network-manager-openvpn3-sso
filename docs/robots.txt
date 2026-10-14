@@ -28,4 +28,4 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
-Sitemap: https://quinnjr.github.io/network-manager-openvpn-sso/sitemap.xml
+Sitemap: https://code-acrobat.github.io/network-manager-openvpn3-sso/sitemap.xml

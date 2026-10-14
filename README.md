@@ -2,8 +2,10 @@
 
 A NetworkManager VPN plugin that drives the **OpenVPN 3 Linux client** and adds browser-based Single Sign-On (SSO) support for server-driven web authentication.
 
-[![CI](https://github.com/quinnjr/network-manager-openvpn-sso/actions/workflows/ci.yml/badge.svg)](https://github.com/quinnjr/network-manager-openvpn-sso/actions/workflows/ci.yml)
-[![Release](https://github.com/quinnjr/network-manager-openvpn-sso/actions/workflows/release.yml/badge.svg)](https://github.com/quinnjr/network-manager-openvpn-sso/actions/workflows/release.yml)
+This is a hard fork of [`quinnjr/network-manager-openvpn-sso`](https://github.com/quinnjr/network-manager-openvpn-sso), reworked to talk to the OpenVPN 3 Linux D-Bus services instead of spawning an `openvpn` 2.x process. Many thanks to [Joseph R. Quinn](https://github.com/quinnjr) for the original NetworkManager integration and the Plasma UI plugin.
+
+[![CI](https://github.com/code-acrobat/network-manager-openvpn3-sso/actions/workflows/ci.yml/badge.svg)](https://github.com/code-acrobat/network-manager-openvpn3-sso/actions/workflows/ci.yml)
+[![Release](https://github.com/code-acrobat/network-manager-openvpn3-sso/actions/workflows/release.yml/badge.svg)](https://github.com/code-acrobat/network-manager-openvpn3-sso/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/LICENSE-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
@@ -111,8 +113,8 @@ The build is pure Rust (no system D-Bus/OpenSSL dev packages needed).
 ### Build
 
 ```bash
-git clone https://github.com/quinnjr/network-manager-openvpn-sso.git
-cd network-manager-openvpn-sso
+git clone https://github.com/code-acrobat/network-manager-openvpn3-sso.git
+cd network-manager-openvpn3-sso
 cargo build --release
 ```
 
@@ -138,7 +140,7 @@ Credentials for the SSO flow are handled by the OpenVPN 3 backend and the browse
 
 ### Browser doesn't open
 
-The plugin (spawned by NetworkManager as root) has no desktop session environment. It derives the graphical session from the filesystem and re-runs `xdg-open` as the desktop user via `runuser`. Ensure `xdg-open` and a default browser are configured. If it still fails, check the plugin log:
+The plugin (spawned by NetworkManager as root) has no desktop session environment. It derives the graphical session from the filesystem and opens the URL in the user's browser, preferring `xdg-desktop-portal` (invoked as the desktop user, via the session bus — it works even when the plugin's own environment can't reach the desktop session) and falling back to `xdg-open` run as the desktop user. Every attempt — success or failure — is logged, so check:
 
 ```bash
 journalctl -t nm-openvpn3-sso-service -f
@@ -186,8 +188,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-- [GitHub Issues](https://github.com/quinnjr/network-manager-openvpn-sso/issues)
+- [GitHub Issues](https://github.com/code-acrobat/network-manager-openvpn3-sso/issues)
 
 ---
 
-Made with ❤️ by [Joseph R. Quinn](https://github.com/quinnjr)
+Hard fork of [quinnjr/network-manager-openvpn-sso](https://github.com/quinnjr/network-manager-openvpn-sso), ported to the OpenVPN 3 Linux client. Many thanks to [Joseph R. Quinn](https://github.com/quinnjr) for the original plugin and the Plasma UI. MIT License — see [LICENSE](LICENSE).
