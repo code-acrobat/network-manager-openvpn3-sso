@@ -200,7 +200,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Full history + tags: the changelog step diffs against the previous
+      # tag; the default shallow checkout leaves no tags to describe.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v8
