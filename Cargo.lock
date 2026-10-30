@@ -381,7 +381,7 @@ dependencies = [
 
 [[package]]
 name = "nm-openvpn3-sso"
-version = "0.4.20"
+version = "0.4.21"
 dependencies = [
  "anyhow",
  "futures",
