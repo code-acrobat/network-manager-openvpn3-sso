@@ -1094,7 +1094,9 @@ fn prefix_netmask(prefix: u32) -> String {
 /// Reassemble an .ovpn profile from the fragment pieces `nmcli connection
 /// import type openvpn` produces (ca/cert/key/tls-crypt extracted to files,
 /// the rest scattered over vpn.data). Whitelist mapping only — the openvpn3
-/// config parser rejects unknown options, so unrecognised keys are dropped.
+/// config parser rejects unknown options, so unrecognised keys are dropped
+/// (and logged, so a server-side profile change fails visibly in journald
+/// instead of as a silent handshake stall).
 fn build_profile_text(raw: &HashMap<String, String>) -> String {
     let mut text = String::from("client\n");
     let dev = raw.get("dev").map(|s| s.as_str()).unwrap_or("tun");
@@ -1139,6 +1141,8 @@ fn build_profile_text(raw: &HashMap<String, String>) -> String {
         ("auth", "auth"),
         ("remote-cert-tls", "remote-cert-tls"),
         ("tls-version-min", "tls-version-min"),
+        // NM importer names it tunnel-mtu; the .ovpn directive is tun-mtu.
+        ("tunnel-mtu", "tun-mtu"),
     ] {
         if let Some(v) = raw.get(key) {
             text.push_str(&format!("{directive} {v}\n"));
@@ -1160,6 +1164,42 @@ fn build_profile_text(raw: &HashMap<String, String>) -> String {
         .unwrap_or(false)
     {
         text.push_str("auth-user-pass\n");
+    }
+
+    // Visibility for the tls-crypt-v2 class of bug: any vpn.data key with no
+    // mapping here silently produces a broken profile. Warn instead of
+    // dropping quietly — names only, values may hold credentials.
+    // `config` is a whole-file path handled by the config loader, not here;
+    // `dev-type` and `connect-timeout` are importer furniture the synthesis
+    // intentionally ignores.
+    const CONSUMED: &[&str] = &[
+        "config",
+        "dev",
+        "dev-type",
+        "connect-timeout",
+        "remote",
+        "ca",
+        "cert",
+        "key",
+        "tls-crypt-v2",
+        "tls-crypt",
+        "ta",
+        "ta-dir",
+        "cipher",
+        "auth",
+        "remote-cert-tls",
+        "tls-version-min",
+        "tunnel-mtu",
+        "reneg-seconds",
+        "push-peer-info",
+        "connection-type",
+    ];
+    for key in raw.keys() {
+        if !CONSUMED.contains(&key.as_str()) {
+            warn!(
+                "vpn.data key {key:?} has no synthesis mapping — dropped; if the server requires it the handshake will stall"
+            );
+        }
     }
     text
 }
@@ -1215,6 +1255,7 @@ mod tests {
             ("cipher".into(), "AES-256-CBC".into()),
             ("reneg-seconds".into(), "604800".into()),
             ("push-peer-info".into(), "yes".into()),
+            ("tunnel-mtu".into(), "1500".into()),
             ("unknown-key".into(), "should-not-appear".into()),
         ]);
 
@@ -1229,6 +1270,7 @@ mod tests {
             "cipher AES-256-CBC\n",
             "reneg-sec 604800\n",
             "push-peer-info\n",
+            "tun-mtu 1500\n",
         ] {
             assert!(text.contains(expected), "missing {expected:?} in:\n{text}");
         }
