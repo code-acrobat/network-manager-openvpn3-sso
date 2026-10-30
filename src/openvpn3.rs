@@ -1123,7 +1123,9 @@ fn build_profile_text(raw: &HashMap<String, String>) -> String {
             text.push_str(&format!("<{tag}>\n{pem}\n</{tag}>\n"));
         }
     }
-    if let Some(pem) = read_inline(raw.get("tls-crypt")) {
+    if let Some(pem) = read_inline(raw.get("tls-crypt-v2")) {
+        text.push_str(&format!("<tls-crypt-v2>\n{pem}\n</tls-crypt-v2>\n"));
+    } else if let Some(pem) = read_inline(raw.get("tls-crypt")) {
         text.push_str(&format!("<tls-crypt>\n{pem}\n</tls-crypt>\n"));
     } else if let Some(pem) = read_inline(raw.get("ta")) {
         text.push_str(&format!("<tls-auth>\n{pem}\n</tls-auth>\n"));
@@ -1232,6 +1234,26 @@ mod tests {
         }
         assert!(!text.contains("should-not-appear"));
         assert!(!text.contains("unknown-key"));
+
+        // tls-crypt-v2 profiles (post-2026 server exports) must inline the
+        // client key — a dropped block leaves the control channel without
+        // wrapping and the handshake stalls forever.
+        let tcv2 = dir.join("nm-sso-test-tls-crypt-v2.pem");
+        std::fs::write(
+            &tcv2,
+            "-----BEGIN OpenVPN tls-crypt-v2 client key-----\nTESTKEY\n-----END OpenVPN tls-crypt-v2 client key-----\n",
+        )
+        .unwrap();
+        let mut raw = raw;
+        raw.insert(
+            "tls-crypt-v2".into(),
+            tcv2.as_os_str().to_string_lossy().to_string(),
+        );
+        let text = build_profile_text(&raw);
+        assert!(
+            text.contains("<tls-crypt-v2>\n-----BEGIN OpenVPN tls-crypt-v2 client key-----"),
+            "tls-crypt-v2 not inlined:\n{text}"
+        );
         std::fs::remove_file(&ca).ok();
     }
 }
