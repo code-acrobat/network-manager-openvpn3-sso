@@ -123,7 +123,10 @@ impl VpnPlugin {
             if let Some(ref mut mgr) = manager {
                 match mgr.connect().await {
                     Ok(()) => {
-                        info!("VPN connection established");
+                        // connect() only means Connect() was accepted by the
+                        // backend — the tunnel is up when the watcher emits
+                        // Connected and NM reaches state 5.
+                        info!("Connect sequence handed off to OpenVPN 3; tunnel state pending");
                     }
                     Err(e) => {
                         error!("VPN connection failed: {:#}", e);
